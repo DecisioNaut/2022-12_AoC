@@ -1,0 +1,1 @@
+self.parent_dir is not None
