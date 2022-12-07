@@ -96,7 +96,7 @@ def main():
 
     # Part 1
     limited_sizes = [size for size in size_counter.values() if size <= 100_000]
-    print(sum(limited_sizes))
+    print("Part 1:", sum(limited_sizes))
 
     # Part 2
     free_volume = 70_000_000 - root_dir.size
@@ -107,7 +107,7 @@ def main():
         if size >= min_volume_to_delete
     }
     min_dir = min(dirs_in_consideration, key=dirs_in_consideration.get)
-    print(min_dir, dirs_in_consideration[min_dir])
+    print("Part 2:", dirs_in_consideration[min_dir])
 
 
 if __name__ == "__main__":
