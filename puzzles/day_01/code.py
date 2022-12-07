@@ -8,7 +8,7 @@ def read_elves(file: str) -> List[List[int]]:
     elves = []
     elf = []
 
-    with open("./puzzles/day_1/" + file) as in_file:
+    with open("./puzzles/day_01/" + file) as in_file:
         for item in in_file.readlines():
             if item.strip() == "":
                 elves.append(elf)
@@ -41,7 +41,7 @@ def main():
     print("max_total_calories", max(total_calories))
 
     # Result part 2
-    print(sum(sorted(total_calories)[-3:]))
+    print("sum_total_calories_top_3", sum(sorted(total_calories)[-3:]))
 
 
 if __name__ == "__main__":
