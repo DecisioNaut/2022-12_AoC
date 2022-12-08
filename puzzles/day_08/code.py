@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import List, Tuple
 from itertools import accumulate
-from functools import partialmethod
 from copy import deepcopy
+from pprint import pprint
 
 
 def get_data(file: str) -> List[List[int]]:
@@ -14,91 +14,33 @@ def get_data(file: str) -> List[List[int]]:
     return data
 
 
-class HeightGrid:
-    def __init__(self, data: List[List[int]]) -> None:
-        self._data = data
-        self._height = len(data)
-        self._width = len(data[0])
+def is_visible(data, i, j):
 
-    def __lt__(self, other: HeightGrid) -> BooleanGrid:
-        resulting_data = deepcopy(self._data)
-        for i in range(self._height):
-            for j in range(self._width):
-                resulting_data[i][j] = self._data[i][j] < other._data[i][j]
-        return BooleanGrid(data=resulting_data)
+    target_val = data[i][j]
 
-    def view_from_top(self) -> HeightGrid:
-        resulting_data = deepcopy(self._data)
-        for i in range(self._height):
-            print("here")
-            resulting_data[:][i] = accumulate(self._data[:][i], max)
-        return HeightGrid(resulting_data)
+    height = len(data)
+    width = len(data[0])
 
-    def view_from_bottom(self) -> HeightGrid:
-        resulting_data = deepcopy(self._data)
-        # for i in range(self._height):
-        #    for j in range(self._width):
-        #        resulting_data[i][j] = self._data[i][j]
-        return HeightGrid(resulting_data)
-
-    def view_from_left(self) -> HeightGrid:
-        resulting_data = deepcopy(self._data)
-        # for i in range(self._height):
-        #    for j in range(self._width):
-        #        resulting_data[i][j] = self._data[i][j]
-        return HeightGrid(resulting_data)
-
-    def view_from_right(self) -> HeightGrid:
-        resulting_data = deepcopy(self._data)
-        # for i in range(self._height):
-        #    for j in range(self._width):
-        #        resulting_data[i][j] = self._data[i][j]
-        return HeightGrid(resulting_data)
-
-    def __str__(self) -> None:
-        return str(self._data)
-
-
-class BooleanGrid:
-    def __init__(self, data: List[List[bool]]) -> None:
-        self._data = data
-        self._height = len(data)
-        self._width = len(data[0])
-
-    def __and__(self, other: BooleanGrid) -> BooleanGrid:
-        resulting_data = deepcopy(self._data)
-        for i in range(self._height):
-            for j in range(self._width):
-                resulting_data[i][j] = self._data[i][j] & other._data[i][j]
-        return BooleanGrid(data=resulting_data)
-
-    def __str__(self) -> None:
-        return str(self._data)
-
-    def count_truevals(self) -> int:
-        result = 0
-        for i in range(self._height):
-            for j in range(self._width):
-                result += self._data[i][j]
-        return result
+    if (i == 0) | (i == height - 1) | (j == 0) | (j == width - 1):
+        return True
+    else:
+        from_left = target_val > max([data[i][k] for k in range(j)])
+        from_right = target_val > max([data[i][k] for k in range(j + 1, width)])
+        from_top = target_val > max([data[k][j] for k in range(i)])
+        from_bottom = target_val > max([data[k][j] for k in range(i + 1, height)])
+        return from_left | from_right | from_top | from_bottom
 
 
 def main():
-    data = get_data("part_1_data_example_2.txt")
 
-    grid = HeightGrid(data)
+    data = get_data("part_1_data.txt")
 
-    print(grid)
-    print(grid.view_from_top())
+    visibles = 0
+    for i in range(len(data)):
+        for j in range(len(data[0])):
+            visibles += is_visible(data, i, j)
 
-    answer_part_1 = (
-        (grid < grid.view_from_top())
-        & (grid < grid.view_from_bottom())
-        & (grid < grid.view_from_left())
-        & (grid < grid.view_from_right())
-    ).count_truevals()
-
-    print("Part 1:", answer_part_1)
+    print("Part 1:", visibles)
 
 
 if __name__ == "__main__":
