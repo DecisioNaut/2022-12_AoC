@@ -1,4 +1,6 @@
-# Advent of Code 2022 :snowman:
+# :santa: Advent of Code 2022 :christmas_tree:
+:bell::bell::bell::bell::bell::bell::bell::bell::bell::bell::bell::bell::bell::bell::bell::bell::bell::bell::bell::bell::bell::bell:
+
 Finally, and for the first year, I found some time to take part in the [Advent of Code](https://adventofcode.com)!  
 
 The Advent of Code is a yearly, seasonal series of coding puzzles:
