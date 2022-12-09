@@ -13,7 +13,7 @@ The Advent of Code is a yearly, seasonal series of **coding puzzles**:
 - Participants need to sign-up and then get their own versions/input data as described above.
 
 > **Warning**  
-> Don't spoil your own fun, but copy-pasting my solutions contained in this repo!  
+> Don't spoil your own fun by copy-pasting my solutions contained in this repo!  
 
 > **Note**  
 > This repos doesn't need anything but Python 3.11
