@@ -1,5 +1,7 @@
 # :santa: Advent of Code 2022 :christmas_tree:
-:bell::bell::bell::bell::bell::bell::bell::bell::bell::bell::bell::bell::bell::bell::bell::bell::bell::bell::bell::bell::bell::bell:
+:bell::bell::bell::bell::bell::bell::bell::bell::bell::bell::bell::bell::bell::bell::bell::bell::bell::bell::bell::bell::bell::bell::bell::bell::bell::bell::bell::bell::bell:
+
+:snowflake::star:
 
 Finally, and for the first year, I found some time to take part in the [Advent of Code](https://adventofcode.com)!  
 
