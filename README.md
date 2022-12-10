@@ -2,7 +2,8 @@
 
 :snowflake::star::snowflake::star::snowflake::star::snowflake::star::snowflake::star::snowflake::star::snowflake::star::snowflake::star::snowflake::star::snowflake::star::snowflake::star::snowflake::star::snowflake::star::snowflake::star::snowflake::star::snowflake::star:
 
-Finally, and for the first year, I found some time to take part in the [Advent of Code](https://adventofcode.com)!  
+Finally, and for the first year, I found some time to take part in the [Advent of Code](https://adventofcode.com).  
+This repo is the landing zone for my code. But what's the **Advent of Code**?
 
 The Advent of Code is a yearly, seasonal series of **coding puzzles**:
 - **Every day**, from the 1st to the 25th of December, a new puzzle is being published. 
@@ -17,4 +18,3 @@ The Advent of Code is a yearly, seasonal series of **coding puzzles**:
 
 > **Note**  
 > This repo doesn't need anything but Python 3.11
-# DecisioNaut.github.io
