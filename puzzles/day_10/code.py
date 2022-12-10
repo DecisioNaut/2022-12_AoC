@@ -33,8 +33,25 @@ class Device:
                 self.addx(value=instruction[1])
 
     def signal_strength_at(self, time):
-        # print(time, self.register[time - 1], time * self.register[time - 1])
         return time * self.register[time - 1]
+
+
+class CRT:
+    def __init__(self):
+        self.screen = [["." for i in range(40)] for j in range(6)]
+        self.beam = ["." if not (j in [1 - 1, 1, 1 + 1]) else "#" for j in range(40)]
+
+    def update_beam(self, i):
+        self.beam = ["." if not (j in [i - 1, i, i + 1]) else "#" for j in range(40)]
+
+    def update_screen(self, i):
+        column = i % 40
+        row = i // 40
+        self.screen[row][column] = self.beam[column]
+
+    def show(self):
+        for row in self.screen:
+            print("".join(row))
 
 
 def main():
@@ -53,6 +70,14 @@ def main():
         signals.append(device.signal_strength_at(time))
 
     print("Part 1:", sum(signals))
+
+    crt = CRT()
+
+    for time, cpu in enumerate(device.register[:-1]):
+        crt.update_beam(cpu)
+        crt.update_screen(time)
+
+    crt.show()
 
 
 if __name__ == "__main__":
