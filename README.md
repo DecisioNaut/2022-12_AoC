@@ -16,4 +16,4 @@ The Advent of Code is a yearly, seasonal series of **coding puzzles**:
 > Don't spoil your own fun by copy-pasting my solutions contained in this repo!  
 
 > **Note**  
-> This repos doesn't need anything but Python 3.11
+> This repo doesn't need anything but Python 3.11
