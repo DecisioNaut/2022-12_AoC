@@ -153,9 +153,6 @@ def part_2():
                 item, throw_to = monkey.throw_item()
                 monkeys[throw_to].catch_item(item)
 
-        if i % 10 == 0:
-            print(i, monkeys[0].inspection_count, max(monkeys[0].items))
-
     inspection_counts = []
 
     for num, monkey in enumerate(monkeys):
