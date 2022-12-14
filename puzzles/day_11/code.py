@@ -64,6 +64,7 @@ class Monkey:
         self.change_worry = change_worry
         self.throw_to = throw_to
         self.calm_down = calm_down
+        self.contain_worry_level = None
 
     @property
     def num_items(self):
@@ -82,12 +83,15 @@ class Monkey:
         return item_with_relief, throw_to
 
     def catch_item(self, item):
+        if self.contain_worry_level:
+            item = item % self.contain_worry_level
         self.items.append(item)
 
 
 def make_monkeys(file: str, calm_down=True) -> List[Monkey]:
 
     monkeys = []
+    contain_worry_level = 1
 
     for line_num, line_str in enumerate(get_data(file)):
 
@@ -104,6 +108,7 @@ def make_monkeys(file: str, calm_down=True) -> List[Monkey]:
 
         elif mod_line_num == 3:
             test = translate_test(line_str)
+            contain_worry_level *= test
 
         elif mod_line_num == 4:
             if_true = translate_if_true(line_str)
@@ -113,6 +118,9 @@ def make_monkeys(file: str, calm_down=True) -> List[Monkey]:
             throw_to = make_test_operation(test, if_true, if_false)
             monkey = Monkey(items, change_worry, throw_to, calm_down=calm_down)
             monkeys.append(monkey)
+
+    for monkey in monkeys:
+        monkey.contain_worry_level = contain_worry_level
 
     return monkeys
 
@@ -144,6 +152,9 @@ def part_2():
             for j in range(monkey.num_items):
                 item, throw_to = monkey.throw_item()
                 monkeys[throw_to].catch_item(item)
+
+        if i % 10 == 0:
+            print(i, monkeys[0].inspection_count, max(monkeys[0].items))
 
     inspection_counts = []
 
