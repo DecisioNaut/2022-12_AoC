@@ -37,7 +37,7 @@ class Position:
         self.col = col
 
     def __repr__(self) -> str:
-        return f"[{self.row}, [{self.col}]]"
+        return f"[{self.row}, {self.col}]"
 
 
 class HeightMap:
@@ -114,7 +114,7 @@ class Path:
     ) -> Tuple[Position, Position, Position, Position]:
         current_row = current_pos.row
         current_col = current_pos.col
-        max_row, max_col = self._map.shape
+        max_row, max_col = self._height_map.shape
         up = Position(max(current_row - 1, 0), current_col)
         down = Position(min(current_row + 1, max_row - 1), current_col)
         left = Position(current_row, max(current_col - 1, 0))
@@ -122,19 +122,34 @@ class Path:
         return up, down, left, right
 
     def _possible_next(self, current_pos: Position):
-        neighbor_positions = self._neighbor_positions(current_pos)
+        neighbors = self._neighbor_positions(current_pos)
+        unvisited_neighbors = [
+            neighbor
+            for neighbor in neighbors
+            if self._visited_map.not_visited(neighbor)
+        ]
+        possible_next = [
+            unvisited_neighbor
+            for unvisited_neighbor in unvisited_neighbors
+            if self._height_map.height_difference(current_pos, unvisited_neighbor) <= 1
+        ]
+        return unvisited_neighbors
 
 
 def part_1(file: str):
 
     height_map_data, start_pos, target_pos = get_height_map_start_pos_target_pos(file)
+
     start_pos = Position(*start_pos)
     target_pos = Position(*target_pos)
     height_map = HeightMap(height_map_data=height_map_data)
     visited_map = VisitedMap(height_map=height_map, start_pos=start_pos)
 
+    path = Path(start_pos, target_pos, height_map)
+
     print(visited_map.not_visited(start_pos))
     print(height_map.height_difference(start_pos, target_pos))
+    print(path._possible_next(current_pos=start_pos))
 
 
 def part_2(file: str):
