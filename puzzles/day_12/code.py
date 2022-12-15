@@ -1,5 +1,6 @@
 from __future__ import annotations
 from typing import List, Tuple, Optional
+from copy import deepcopy
 
 
 def get_data(file: str) -> str:
@@ -73,131 +74,20 @@ class HeightMap:
         return next_height - current_height
 
 
-""" 
-class VisitedMap:
-    def __init__(self, height_map: HeightMap, start_pos: Position) -> None:
-        visited_map_data = [[False for item in row] for row in height_map]
-        visited_map_data[start_pos.row][start_pos.col] = True
-        self._visited_map_data = visited_map_data
-
-    def __repr__(self) -> str:
-        visited_map_str = f"\n".join(
-            [
-                "".join([("1" if item else "0") for item in row])
-                for row in self._visited_map_data
-            ]
-        )
-        return visited_map_str
-
-    def __getitem__(self, index) -> List[bool]:
-        return self._visited_map_data[index]
-
-    def update(self, pos: Position) -> None:
-        self._visited_map_data[pos.row][pos.col] = True
-
-    def visited(self, pos: Position) -> bool:
-        return self._visited_map_data[pos.row][pos.col]
-
-    def not_visited(self, pos: Position) -> None:
-        return not self.visited(pos)
-
-    @property
-    def num_visited(self):
-        return sum([sum(row) for row in self._visited_map_data])
-
-
-class Path:
-    def __init__(
-        self,
-        start_pos: Position,
-        target_pos: Position,
-        height_map: HeightMap,
-        visited_map: Optional[VisitedMap] = None,
-    ) -> None:
-
-        self._start_pos = start_pos
-        self._target_pos = target_pos
-        self._height_map = height_map
-
-        if not visited_map:
-            self._visited_map = VisitedMap(height_map=height_map, start_pos=start_pos)
-        else:
-            self._visited_map = visited_map
-
-        self.current_pos = start_pos
-
-    def update(self, pos: Position) -> None:
-        self._visited_map.update(pos)
-
-    def _neighbor_positions(
-        self, current_pos: Position
-    ) -> Tuple[Position, Position, Position, Position]:
-        current_row = current_pos.row
-        current_col = current_pos.col
-        max_row, max_col = self._height_map.shape
-        up = Position(max(current_row - 1, 0), current_col)
-        down = Position(min(current_row + 1, max_row - 1), current_col)
-        left = Position(current_row, max(current_col - 1, 0))
-        right = Position(current_row, min(current_col + 1, max_col - 1))
-        return up, down, left, right
-
-    def _possible_nexts(self, current_pos: Position):
-        neighbors = self._neighbor_positions(current_pos)
-        unvisited_neighbors = [
-            neighbor
-            for neighbor in neighbors
-            if self._visited_map.not_visited(neighbor)
-        ]
-        possible_nexts = [
-            unvisited_neighbor
-            for unvisited_neighbor in unvisited_neighbors
-            if self._height_map.height_difference(current_pos, unvisited_neighbor) <= 1
-        ]
-        return possible_nexts
-
-    def get_next(self) -> List[Path]:
-
-        possible_nexts = self._possible_nexts(self.current_pos)
-
-        if possible_nexts != []:
-
-            next_paths = []
-
-            for possible_next in possible_nexts:
-
-                start_pos = self._start_pos
-                target_pos = self._target_pos
-                height_map = self._height_map
-                visited_map = self._visited_map
-
-                next_path = Path(
-                    start_pos=start_pos,
-                    target_pos=target_pos,
-                    height_map=height_map,
-                    visited_map=visited_map,
-                )
-                next_path.update(possible_next)
-
-                next_paths.append(next_path)
-
-        return next_paths
- """
-
-
 class Path:
     def __init__(
         self, start_pos: Position, target_pos: Position, height_map: HeightMap
     ) -> None:
 
-        self.current_pos = start_pos
+        # Meta data
         self.target_pos = target_pos
-
         self.height_map = height_map
-
         max_row_plus_1, max_col_plus_1 = height_map.shape
         self.max_row = max_row_plus_1 - 1
         self.max_col = max_col_plus_1 - 1
 
+        # Variable data
+        self.current_pos = start_pos
         self.path = [start_pos]
 
     def __repr__(self) -> str:
@@ -218,32 +108,46 @@ class Path:
         return self.at_target | self.stuck
 
     def __add__(self, next_position: Position):
-        assert next_position in self.available_neighbors
+        if self.available_neighbors:
+            assert next_position in self.available_neighbors
         assert not self.done
-        self.current_pos = next_position
-        self.path.append(next_position)
+
+        result = deepcopy(self)
+        result.current_pos = next_position
+        result.path.append(next_position)
+
+        return result
+
+    def __len__(self):
+        return len(self.path) - 1
 
     def visited(self, pos: Position) -> bool:
         return True if pos in self.path else False
 
     @property
     def current_neighbors(self) -> List[Position]:
+        """Function to get all neighbors of current position"""
 
         if self.current_pos != self.target_pos:
+
+            # Some metadata for later abbrev
             cur_row = self.current_pos.row
             cur_col = self.current_pos.col
-
             max_row = self.max_row
             max_col = self.max_col
 
+            # initiale list of trimmed neighbors
             interm_neighbors = []
 
+            # up, down trimmed to be on map
             interm_neighbors.append(Position(max(cur_row - 1, 0), cur_col))
             interm_neighbors.append(Position(min(cur_row + 1, max_row), cur_col))
 
+            # left, right trimmed to be on map
             interm_neighbors.append(Position(cur_row, max(cur_col - 1, 0)))
             interm_neighbors.append(Position(cur_row, min(cur_col + 1, max_col)))
 
+            # only trimmed up, down, left, right not being current position
             current_neighbors = [
                 interm_neighbor
                 for interm_neighbor in interm_neighbors
@@ -258,6 +162,7 @@ class Path:
 
     @property
     def unvisited_neighbors(self) -> Optional[List[Position]]:
+        """Function to get all neighbors of current position that have not been visited yet"""
 
         current_neighbors = self.current_neighbors
 
@@ -271,6 +176,7 @@ class Path:
 
     @property
     def available_neighbors(self) -> List[Position]:
+        """Function to get all neighbors that have neither been visited yet, not are more that 1 level up."""
 
         unvisited_neighbors = self.unvisited_neighbors
 
@@ -283,10 +189,24 @@ class Path:
 
         return available_neighbors
 
-    def make_path(self):
+    def get_all_paths(self) -> List[Path]:
 
-        while self.available_neighbors:
-            self + self.available_neighbors[0]
+        available_neighbors = self.available_neighbors
+
+        if available_neighbors == []:
+
+            return [self]
+
+        else:
+
+            result = []
+
+            for available_neighbor in available_neighbors:
+
+                next_path = self + available_neighbor
+                result += next_path.get_all_paths()
+
+            return result
 
 
 def part_1(file: str):
@@ -299,9 +219,13 @@ def part_1(file: str):
 
     path = Path(start_pos=start_pos, target_pos=target_pos, height_map=height_map)
 
-    path.make_path()
+    all_paths = path.get_all_paths()
 
-    print(len(path.path))
+    relevant_paths_lengths = [
+        len(relevant_path) for relevant_path in all_paths if relevant_path.at_target
+    ]
+
+    print("Part 1:", min(relevant_paths_lengths))
 
 
 def part_2(file: str):
@@ -316,4 +240,4 @@ def main(file: str):
 
 
 if __name__ == "__main__":
-    main("example.txt")
+    main("data.txt")
