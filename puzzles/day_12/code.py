@@ -35,27 +35,38 @@ class Position:
 
 
 class DijkstraMap:
-    def __init__(self, heightmap: List[List[int]], startpos: Position) -> None:
+    def __init__(
+        self, heightmap: List[List[int]], startpos: Position, downhill: bool = False
+    ) -> None:
 
         # Setting up basic data
-        self.heightmap = heightmap
+        self.heightmap: List[List[bool]] = heightmap
 
         # 1. Mark all nodes as unvisited
-        self.visitedmap = [[False for col in row] for row in heightmap]
+        self.visitedmap: List[List[bool]] = [
+            [False for col in row] for row in heightmap
+        ]
 
         # 2. Assign every node a tentative distance inf, except startpos where it's 0
-        self.distancemap = [[inf for col in row] for row in heightmap]
-        self.set_distance(startpos, 0)
+        self.distancemap: List[List[float]] = [
+            [inf for col in row] for row in heightmap
+        ]
+        self.set_distance(startpos, 0.0)
 
         # Setting up a deque for positions to be evaluated
         self.to_be_evaluated: List[Position] = [startpos]
+
+        self.downhill = downhill
 
     def get_height(self, pos: Position) -> int:
         row, col = pos.as_tuple
         return self.heightmap[row][col]
 
     def is_accessible(self, from_pos: Position, to_pos: Position) -> bool:
-        return self.get_height(to_pos) - 1 <= self.get_height(from_pos)
+        if not (self.downhill):
+            return self.get_height(to_pos) - 1 <= self.get_height(from_pos)
+        else:
+            return self.get_height(from_pos) - 1 <= self.get_height(to_pos)
 
     def get_visited(self, pos: Position) -> None:
         row, col = pos.as_tuple
@@ -159,13 +170,26 @@ def part_1(file: str):
 
     map.calculate_distances()
 
-    print("Part 1:", map.get_distance(targetpos))
+    print("Part 1:", int(map.get_distance(targetpos)))
 
 
 def part_2(file: str):
-    print(
-        "Part 2:",
-    )
+
+    heightmap, _, targetpos = get_heightmap_startpos_targetpos(file)
+
+    map = DijkstraMap(heightmap, targetpos, downhill=True)
+
+    map.calculate_distances()
+
+    min_scenic_len = inf
+
+    for row, row_list in enumerate(map.distancemap):
+        for col, dist in enumerate(row_list):
+            if map.heightmap[row][col] == 1:
+                if dist < min_scenic_len:
+                    min_scenic_len = int(dist)
+
+    print("Part 2:", min_scenic_len)
 
 
 def main(file: str):
