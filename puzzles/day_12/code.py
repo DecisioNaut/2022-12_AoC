@@ -1,6 +1,6 @@
 from __future__ import annotations
-from typing import List, Tuple, Optional
-from copy import deepcopy
+from typing import List, Tuple
+from math import inf
 
 
 def get_data(file: str) -> str:
@@ -9,223 +9,157 @@ def get_data(file: str) -> str:
             yield line.strip()
 
 
-def get_height_map_start_pos_target_pos(
-    file: str,
-) -> Tuple[List[List[int]], List[int], List[int]]:
-
-    height_map = []
-
-    for row_index, data in enumerate(get_data(file)):
-
-        start_column = data.find("S")
-        if start_column != -1:
-            start_pos = [row_index, start_column]
-
-        target_pos_column = data.find("E")
-        if target_pos_column != -1:
-            target_pos = [row_index, target_pos_column]
-
-        height_map_row_alphabet = data.replace("S", "a").replace("E", "z")
-        height_map_row = [ord(char) - 96 for char in height_map_row_alphabet]
-
-        height_map.append(height_map_row)
-
-    return height_map, start_pos, target_pos
-
-
 class Position:
     def __init__(self, row, col) -> None:
         self.row = row
         self.col = col
 
     def __repr__(self) -> str:
+        return f"Position(row={self.row}, col={self.col})"
+
+    def __str__(self) -> str:
         return f"[{self.row}, {self.col}]"
 
-    def __eq__(self, other: Position) -> bool:
-        return (self.row == other.row) & (self.col == other.col)
+    def __add__(self, other: Position) -> Position:
+        row = self.row + other.row
+        col = self.col + other.col
+        return Position(row, col)
 
-    def __ne__(self, other: Position) -> bool:
-        return (self.row != other.row) | (self.col != other.col)
-
-
-class HeightMap:
-    def __init__(self, height_map_data: List[List[int]]) -> None:
-        self._height_map_data = height_map_data
+    def __iadd__(self, other: Position) -> None:
+        self.row = self.row + other.row
+        self.col = self.col + other.col
 
     @property
-    def shape(self) -> Tuple[int, int]:
-        return len(self._height_map_data), len(self._height_map_data[0])
-
-    def __repr__(self) -> str:
-        height_map_string = f"\n".join(
-            ["".join([chr(item + 96) for item in row]) for row in self._height_map_data]
-        )
-        return height_map_string
-
-    def __getitem__(self, index) -> List[int]:
-        return self._height_map_data[index]
-
-    def height(self, pos: Position):
-        return self._height_map_data[pos.row][pos.col]
-
-    def height_difference(self, current_pos: Position, next_pos: Position) -> int:
-        current_height = self.height(current_pos)
-        next_height = self.height(next_pos)
-        return next_height - current_height
+    def as_tuple(self):
+        return self.row, self.col
 
 
-class Path:
-    def __init__(
-        self, start_pos: Position, target_pos: Position, height_map: HeightMap
-    ) -> None:
+class DijkstraMap:
+    def __init__(self, heightmap: List[List[int]], startpos: Position) -> None:
 
-        # Meta data
-        self.target_pos = target_pos
-        self.height_map = height_map
-        max_row_plus_1, max_col_plus_1 = height_map.shape
-        self.max_row = max_row_plus_1 - 1
-        self.max_col = max_col_plus_1 - 1
+        # Setting up basic data
+        self.heightmap = heightmap
 
-        # Variable data
-        self.current_pos = start_pos
-        self.path = [start_pos]
+        # 1. Mark all nodes as unvisited
+        self.visitedmap = [[False for col in row] for row in heightmap]
 
-    def __repr__(self) -> str:
-        return repr(self.path)
+        # 2. Assign every node a tentative distance inf, except startpos where it's 0
+        self.distancemap = [[inf for col in row] for row in heightmap]
+        self.set_distance(startpos, 0)
 
-    __str__ = __repr__
+        # Setting up a deque for positions to be evaluated
+        self.to_be_evaluated: List[Position] = [startpos]
 
-    @property
-    def at_target(self):
-        return self.current_pos == self.target_pos
+    def get_height(self, pos: Position) -> int:
+        row, col = pos.as_tuple
+        return self.heightmap[row][col]
 
-    @property
-    def stuck(self):
-        return self.available_neighbors == []
+    def is_accessible(self, from_pos: Position, to_pos: Position) -> bool:
+        return self.get_height(to_pos) - 1 <= self.get_height(from_pos)
 
-    @property
-    def done(self):
-        return self.at_target | self.stuck
+    def get_visited(self, pos: Position) -> None:
+        row, col = pos.as_tuple
+        return self.visitedmap[row][col]
 
-    def __add__(self, next_position: Position):
-        if self.available_neighbors:
-            assert next_position in self.available_neighbors
-        assert not self.done
+    def set_as_visited(self, pos: Position) -> None:
+        row, col = pos.as_tuple
+        self.visitedmap[row][col] = True
 
-        result = deepcopy(self)
-        result.current_pos = next_position
-        result.path.append(next_position)
+    def is_unvisited(self, pos: Position) -> bool:
+        row, col = pos.as_tuple
+        return not self.visitedmap[row][col]
 
-        return result
+    def get_distance(self, pos: Position) -> float:
+        row, col = pos.as_tuple
+        return self.distancemap[row][col]
 
-    def __len__(self):
-        return len(self.path) - 1
+    def set_distance(self, pos: Position, value) -> None:
+        row, col = pos.as_tuple
+        self.distancemap[row][col] = value
 
-    def visited(self, pos: Position) -> bool:
-        return True if pos in self.path else False
+    def update_distance(self, pos: Position, value) -> None:
+        current_value = self.get_distance(pos)
+        if value < current_value:
+            self.set_distance(pos, value)
 
     @property
-    def current_neighbors(self) -> List[Position]:
-        """Function to get all neighbors of current position"""
+    def shape(self):
+        return len(self.heightmap), len(self.heightmap[0])
 
-        if self.current_pos != self.target_pos:
+    def unvisited_neighbors(self, pos: Position):
 
-            # Some metadata for later abbrev
-            cur_row = self.current_pos.row
-            cur_col = self.current_pos.col
-            max_row = self.max_row
-            max_col = self.max_col
+        unvisited_neighbors = []
 
-            # initiale list of trimmed neighbors
-            interm_neighbors = []
+        row, col = pos.as_tuple
+        max_row_plus1, max_col_plus1 = self.shape
 
-            # up, down trimmed to be on map
-            interm_neighbors.append(Position(max(cur_row - 1, 0), cur_col))
-            interm_neighbors.append(Position(min(cur_row + 1, max_row), cur_col))
-
-            # left, right trimmed to be on map
-            interm_neighbors.append(Position(cur_row, max(cur_col - 1, 0)))
-            interm_neighbors.append(Position(cur_row, min(cur_col + 1, max_col)))
-
-            # only trimmed up, down, left, right not being current position
-            current_neighbors = [
-                interm_neighbor
-                for interm_neighbor in interm_neighbors
-                if interm_neighbor != self.current_pos
-            ]
-
-            return current_neighbors
-
-        else:
-
-            return []
-
-    @property
-    def unvisited_neighbors(self) -> Optional[List[Position]]:
-        """Function to get all neighbors of current position that have not been visited yet"""
-
-        current_neighbors = self.current_neighbors
-
-        unvisited_neighbors = [
-            current_neighbor
-            for current_neighbor in current_neighbors
-            if not (self.visited(current_neighbor))
-        ]
+        for candidate_row, candidate_col in [
+            (row - 1, col),
+            (row + 1, col),
+            (row, col - 1),
+            (row, col + 1),
+        ]:
+            if (0 <= candidate_row < max_row_plus1) & (
+                0 <= candidate_col < max_col_plus1
+            ):
+                candidate = Position(candidate_row, candidate_col)
+                if self.is_unvisited(candidate) & self.is_accessible(pos, candidate):
+                    unvisited_neighbors.append(candidate)
 
         return unvisited_neighbors
 
-    @property
-    def available_neighbors(self) -> List[Position]:
-        """Function to get all neighbors that have neither been visited yet, not are more that 1 level up."""
+    def calculate_distances(self):
 
-        unvisited_neighbors = self.unvisited_neighbors
+        while self.to_be_evaluated:
 
-        available_neighbors = [
-            unvisited_neighbor
-            for unvisited_neighbor in unvisited_neighbors
-            if self.height_map.height_difference(self.current_pos, unvisited_neighbor)
-            <= 1
-        ]
+            current_pos = self.to_be_evaluated.pop(0)
 
-        return available_neighbors
+            if self.is_unvisited(current_pos):
 
-    def get_all_paths(self) -> List[Path]:
+                current_dist = self.get_distance(current_pos)
 
-        available_neighbors = self.available_neighbors
+                unvisited_neighbors = self.unvisited_neighbors(current_pos)
 
-        if available_neighbors == []:
+                for unvisited_neighbor in unvisited_neighbors:
+                    self.update_distance(unvisited_neighbor, current_dist + 1)
+                    self.to_be_evaluated.append(unvisited_neighbor)
 
-            return [self]
+                self.set_as_visited(current_pos)
 
-        else:
 
-            result = []
+def get_heightmap_startpos_targetpos(
+    file: str,
+) -> Tuple[List[List[int]], Tuple[int, int], Tuple[int, int]]:
 
-            for available_neighbor in available_neighbors:
+    heightmap = []
 
-                next_path = self + available_neighbor
-                result += next_path.get_all_paths()
+    for row, data in enumerate(get_data(file)):
 
-            return result
+        startpos_col = data.find("S")
+        if startpos_col != -1:
+            startpos = Position(row, startpos_col)
+
+        targetpos_column = data.find("E")
+        if targetpos_column != -1:
+            targetpos = Position(row, targetpos_column)
+
+        heightmap_row_alphabet = data.replace("S", "a").replace("E", "z")
+        heightmap_row = [ord(char) - 96 for char in heightmap_row_alphabet]
+
+        heightmap.append(heightmap_row)
+
+    return heightmap, startpos, targetpos
 
 
 def part_1(file: str):
 
-    height_map_data, start_pos, target_pos = get_height_map_start_pos_target_pos(file)
+    heightmap, startpos, targetpos = get_heightmap_startpos_targetpos(file)
 
-    start_pos = Position(*start_pos)
-    target_pos = Position(*target_pos)
-    height_map = HeightMap(height_map_data=height_map_data)
+    map = DijkstraMap(heightmap, startpos)
 
-    path = Path(start_pos=start_pos, target_pos=target_pos, height_map=height_map)
+    map.calculate_distances()
 
-    all_paths = path.get_all_paths()
-
-    relevant_paths_lengths = [
-        len(relevant_path) for relevant_path in all_paths if relevant_path.at_target
-    ]
-
-    print("Part 1:", min(relevant_paths_lengths))
+    print("Part 1:", map.get_distance(targetpos))
 
 
 def part_2(file: str):
