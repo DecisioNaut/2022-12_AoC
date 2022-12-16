@@ -174,12 +174,16 @@ class Rocks:
     def below_rocks(self, pos: Position) -> bool:
         return pos.y >= self.abyss_starts_at
 
+    @property
     def fundament_starts_at(self) -> int:
         _, _, _, deepest_rock = self.shape
         return deepest_rock + 2
 
     def hits_fundament(self, pos: Position) -> bool:
-        return pos.y == self.fundament_starts_at
+        return pos.y >= self.fundament_starts_at
+
+    def doesnt_hit_fundament(self, pos: Position) -> bool:
+        return not self.hits_fundament(pos)
 
     def __contains__(self, pos: Position) -> bool:
         return pos in self.rocks
@@ -242,33 +246,25 @@ class Cave:
 
     def drop_sand_until_source_blocked(self):
 
-        possible = True
-
-        while possible:
-
-            if self.source_of_sand in self.resting_sand:
-                possible = False
-
-            else:
-
-                falling_sand = self.source_of_sand
-                falling = True
-                while falling:
-                    if self.is_unblocked(falling_sand.down) | self.rocks.hits_fundament(
-                        falling_sand.down
-                    ):
-                        falling_sand = falling_sand.down
-                    elif self.is_unblocked(
-                        falling_sand.down_left
-                    ) | self.rocks.hits_fundament(falling_sand.down_left):
-                        falling_sand = falling_sand.down_left
-                    elif self.is_unblocked(
-                        falling_sand.down_right
-                    ) | self.rocks.hits_fundament(falling_sand.down_right):
-                        falling_sand = falling_sand.down_right
-                    else:
-                        self.resting_sand.add_sand(falling_sand)
-                        falling = False
+        while not (self.source_of_sand in self.resting_sand):
+            falling_sand = self.source_of_sand
+            falling = True
+            while falling:
+                if self.is_unblocked(
+                    falling_sand.down
+                ) & self.rocks.doesnt_hit_fundament(falling_sand.down):
+                    falling_sand = falling_sand.down
+                elif self.is_unblocked(
+                    falling_sand.down_left
+                ) & self.rocks.doesnt_hit_fundament(falling_sand.down_left):
+                    falling_sand = falling_sand.down_left
+                elif self.is_unblocked(
+                    falling_sand.down_right
+                ) & self.rocks.doesnt_hit_fundament(falling_sand.down_right):
+                    falling_sand = falling_sand.down_right
+                else:
+                    self.resting_sand.add_sand(falling_sand)
+                    falling = False
 
 
 def part_1(file: str):
@@ -285,9 +281,7 @@ def part_2(file: str):
     rocks = Rocks(prepare_rocks(file))
     cave = Cave(rocks)
     cave.drop_sand_until_source_blocked()
-    print(
-        "Part 2:",
-    )
+    print("Part 2:", cave.amount_of_sand)
 
 
 def main(file: str):
@@ -296,4 +290,4 @@ def main(file: str):
 
 
 if __name__ == "__main__":
-    main("example.txt")
+    main("data.txt")
