@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from typing import List, Optional, Callable, Union, Dict
-from operator import add, sub, mul, truediv
+from operator import add, sub, mul, truediv, eq
 from pprint import pprint
 
 
@@ -55,16 +55,16 @@ class Monkey:
         self.operation = operation
         self.right = right
 
-    def __call__(self):
+    def __call__(self) -> int:
         if self.number:
             return self.number
         else:
             return int(self.operation(self.left(), self.right()))
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(self.name)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name
 
 
@@ -85,30 +85,58 @@ class MonkeyGroup:
                 else:
                     raise KeyError
 
-    def __getitem__(self, name):
+    def __getitem__(self, name) -> Monkey:
         for monkey in self.monkeys:
             if monkey.name == name:
                 return monkey
         raise KeyError
+
+    def __call__(self, humn: Optional[int] = None) -> int:
+        if humn:
+            old_humn = self["humn"].number
+            self["humn"].number = humn
+            result = self["root"]()
+            self["humn"].number = old_humn
+        else:
+            result = self["root"]()
+        return result
 
 
 def part1(file: str) -> None:
     monkey_dict = make_monkey_dict(file)
     monkey_group = MonkeyGroup(monkey_dict)
 
-    print("Part 1:", monkey_group["root"]())
+    print("Part 1:", monkey_group())
 
 
 def part2(file: str) -> None:
-    data = get_data(file)
-    print(
-        "Part 2:",
-    )
+
+    monkey_dict = make_monkey_dict(file)
+    monkey_group = MonkeyGroup(monkey_dict)
+
+    # Change operation of monkey
+    monkey_group["root"].operation = sub
+
+    # Get start values
+    humn_start = monkey_group["humn"].number
+    root_start = monkey_group()
+
+    # Ok trial and error instead of gradient decent...
+    start = 3_721_298_272_000
+    stop = 3_721_298_273_000
+    step = 1
+
+    for change in range(start, stop, step):
+        root_humn = monkey_group(humn_start + change)
+        if root_humn == 0:
+            break
+
+    print("Part 2:", humn_start + change)
 
 
 def main(file: str) -> None:
 
-    part1(file)
+    # part1(file)
     part2(file)
 
 
