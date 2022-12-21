@@ -21,3 +21,4 @@ The Advent of Code is a yearly, seasonal series of **coding puzzles**:
 
 ***Confessions***
 - In day 12, my own algo was just *waaaay* to unperformant. So, I cheated a bit by watching a YouTube Video, learning that the Dijkstra algorithm is just build for that problem. However, I did not look at the code, but looked it up on wikipedia and implemented it by myself.
+- In day 21, part 2, I quickly searched the value manually (instead of implementing a gradient decent)
