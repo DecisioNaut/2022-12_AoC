@@ -49,9 +49,6 @@ class Shape:
         return self._active
 
 
-# 1st shape
-
-
 class Chamber:
     def __init__(
         self,
