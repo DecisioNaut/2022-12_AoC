@@ -201,26 +201,40 @@ def part1(file: str) -> None:
 
     circular_linked_values = CircularLinkedValues(initial_state)
 
-    # print(circular_linked_values)
-
     for index_of_item, item in enumerate(circular_linked_values):
         places = item.value
         circular_linked_values.move_item_by_places(index_of_item, places)
-        # print(circular_linked_values)
 
     result = [
         circular_linked_values[index_of_zero][num].value
         for num in [1_000, 2_000, 3_000]
     ]
 
-    print("Part 1:", result, sum(result))
+    print("Part 1:", sum(result))
 
 
 def part2(file: str) -> None:
-    data = get_data(file)
-    print(
-        "Part 2:",
-    )
+
+    initial_state_raw = get_initial_state(file)
+
+    initial_state = [811_589_153 * element for element in initial_state_raw]
+    index_of_zero = initial_state.index(0)
+
+    circular_linked_values = CircularLinkedValues(initial_state)
+
+    for i in range(10):
+        for index_of_item, item in enumerate(circular_linked_values):
+            places = item.value
+            circular_linked_values.move_item_by_places(index_of_item, places)
+
+    # print(circular_linked_values)
+
+    result = [
+        circular_linked_values[index_of_zero][num].value
+        for num in [1_000, 2_000, 3_000]
+    ]
+
+    print("Part 2:", sum(result))
 
 
 def main(file: str) -> None:
