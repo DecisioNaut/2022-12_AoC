@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Tuple, Any, Literal, Generator
+from typing import List, Tuple, Literal, Generator
 from itertools import cycle
 
 
