@@ -104,9 +104,23 @@ class CircularLinkedValues:
         item = self._linked_vals[index_of_item]
 
         if places == 0:
+            sign_places = 1
+        else:
+            sign_places = int(places / abs(places))
+
+        unsigned_places = sign_places * places
+
+        mod_unsigned_places = unsigned_places % (len(self) - 1)
+
+        mod_places = sign_places * mod_unsigned_places
+
+        if mod_places == 0:
             pass
 
-        elif places == 1:
+        elif mod_places == 1:
+
+            # from: pred, item, succ, succsucc
+            # to  : pred, succ, item, succsucc
 
             # Other items affected
             pred, succ, succsucc = item[-1], item[+1], item[+2]
@@ -117,7 +131,10 @@ class CircularLinkedValues:
             item.pred, item.succ = succ, succsucc
             succsucc.pred = item
 
-        elif places == -1:
+        elif mod_places == -1:
+
+            # from: predpred, pred, item, succ
+            # to:   predpred, item, pred, succ
 
             # Other items affected
             predpred, pred, succ = item[-2], item[-1], item[+1]
@@ -126,13 +143,16 @@ class CircularLinkedValues:
             predpred.succ = item
             item.pred, item.succ = predpred, pred
             pred.pred, pred.succ = item, succ
-            succ.pred = item
+            succ.pred = pred
 
-        elif places > 1:
+        elif mod_places > 1:
+
+            # from: old_pred, item, old_succ, ..., new_pred, new_succ
+            # to  : old_pred, old_succ, ..., new_pred, item, new_succ
 
             # Other items affected
             old_pred, old_succ = item[-1], item[+1]
-            new_pred, new_succ = item[places], item[places + 1]
+            new_pred, new_succ = item[mod_places], item[mod_places + 1]
 
             # Change of old_pred, old_succ preds and succs
             old_pred.succ, old_succ.pred = old_succ, old_pred
@@ -145,11 +165,14 @@ class CircularLinkedValues:
                 item,
             )
 
-        elif places < -1:
+        elif mod_places < -1:
+
+            # from: new_pred, new_succ, ..., old_pred, item, old_succ
+            # to  : new_pred, item, new_succ, ..., old_pred, old_succ
 
             # Other items affected
             old_pred, old_succ = item[-1], item[+1]
-            new_pred, new_succ = item[places - 1], item[places]
+            new_pred, new_succ = item[mod_places - 1], item[mod_places]
 
             # Change of old_pred, old_succ preds and succs
             old_pred.succ, old_succ.pred = old_succ, old_pred
@@ -178,18 +201,19 @@ def part1(file: str) -> None:
 
     circular_linked_values = CircularLinkedValues(initial_state)
 
+    # print(circular_linked_values)
+
     for index_of_item, item in enumerate(circular_linked_values):
         places = item.value
         circular_linked_values.move_item_by_places(index_of_item, places)
+        # print(circular_linked_values)
 
-    result = sum(
-        [
-            circular_linked_values[index_of_zero][num].value
-            for num in [1_000, 2_000, 3_000]
-        ]
-    )
+    result = [
+        circular_linked_values[index_of_zero][num].value
+        for num in [1_000, 2_000, 3_000]
+    ]
 
-    print("Part 1:", result)
+    print("Part 1:", result, sum(result))
 
 
 def part2(file: str) -> None:
