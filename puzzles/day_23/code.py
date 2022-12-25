@@ -119,18 +119,18 @@ class Elve:
         self.pos: Pos = pos
         self.propos: Pos = pos
         self.next_pos: Pos = pos
-        self._other_elves: Optional[List[Elve]] = None
+        self._other_elves: Optional[Set[Elve]] = None
         self._xs = ["n", "s", "w", "e"]
 
     def __hash__(self) -> int:
         return hash(id(self))
 
     @property
-    def other_elves(self) -> Optional[List[Elve]]:
+    def other_elves(self) -> Optional[Set[Elve]]:
         return self._other_elves
 
     @other_elves.setter
-    def other_elves(self, other_elves: List[Elve]) -> None:
+    def other_elves(self, other_elves: Set[Elve]) -> None:
         self._other_elves = other_elves
 
     def _get_posses_other_elves(self) -> Set[Pos]:
@@ -175,7 +175,7 @@ class Elve:
     __repr__ = __str__
 
     def __eq__(self, other: Elve) -> bool:
-        return self.pos == other.pos
+        return self is other
 
     def __lt__(self, other: Elve) -> bool:
         return self.pos < other.pos
@@ -253,7 +253,7 @@ def get_elves(file: str) -> List[Elve]:
                 if elm == "#":
                     elves.append(Elve(Pos(row, col)))
     for elve in elves:
-        other_elves = [other_elve for other_elve in elves if other_elve != elve]
+        other_elves = set([other_elve for other_elve in elves if other_elve != elve])
         elve.other_elves = other_elves
     return elves
 
@@ -279,8 +279,6 @@ def part2(file: str):
     elves_group = ElvesGroup(elves)
 
     for i in range(10_000):
-        if (i + 1) % 10 == 0:
-            print("step", i + 1)
         elves_group.get_proposses()
         elves_group.get_next_posses()
         if elves_group.get_indent_moves():
@@ -299,4 +297,4 @@ def main(file: str):
 
 
 if __name__ == "__main__":
-    main("example.txt")
+    main("data.txt")
