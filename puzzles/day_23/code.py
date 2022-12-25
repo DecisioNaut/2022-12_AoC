@@ -122,6 +122,9 @@ class Elve:
         self._other_elves: Optional[List[Elve]] = None
         self._xs = ["n", "s", "w", "e"]
 
+    def __hash__(self) -> int:
+        return hash(id(self))
+
     @property
     def other_elves(self) -> Optional[List[Elve]]:
         return self._other_elves
