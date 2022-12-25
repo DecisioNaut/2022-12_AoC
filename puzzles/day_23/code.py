@@ -131,10 +131,7 @@ class Elve:
         self._other_elves = other_elves
 
     def _get_posses_other_elves(self) -> Set[Pos]:
-        posses_other_elves = []
-        for elve in self._other_elves:
-            posses_other_elves.append(elve.pos)
-        return set(posses_other_elves)
+        return set([elve.pos for elve in self._other_elves])
 
     def get_propos(self) -> None:
         posses_other_elves = self._get_posses_other_elves()
@@ -152,10 +149,7 @@ class Elve:
             self.propos = self.pos
 
     def _get_proposses_other_elves(self) -> Set[Pos]:
-        proposses_other_elves = []
-        for elve in self._other_elves:
-            proposses_other_elves.append(elve.propos)
-        return set(proposses_other_elves)
+        return set([elve.propos for elve in self._other_elves])
 
     def get_next_pos(self) -> None:
         proposses_other_elves = self._get_proposses_other_elves()
