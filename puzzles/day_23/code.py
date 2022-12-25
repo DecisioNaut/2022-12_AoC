@@ -1,6 +1,6 @@
 from __future__ import annotations
 from typing import List, Optional, Dict, Union, Set
-from functools import total_ordering, cache
+from functools import total_ordering, cache, cached_property
 from pprint import pprint
 
 
