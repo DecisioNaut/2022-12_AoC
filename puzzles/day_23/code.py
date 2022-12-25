@@ -143,6 +143,9 @@ class Elve:
         if _doesnt_overlap(self.propos, proposses_other_elves):
             self.next_pos = self.propos
 
+    def get_intends_move(self) -> bool:
+        return self.next_pos != self.pos
+
     def move_to_next_pos(self) -> None:
         self.pos, self.propos = (
             self.next_pos,
@@ -173,6 +176,12 @@ class ElvesGroup:
     def get_next_posses(self):
         for elve in self.elves:
             elve.get_next_pos()
+
+    def get_indent_moves(self):
+        intends_move = []
+        for elve in self.elves:
+            intends_move.append(elve.get_intends_move())
+        return any(intends_move)
 
     def move_to_next_posses(self):
         for elve in self.elves:
@@ -238,18 +247,40 @@ def part1(file: str):
     elves = get_elves(file)
 
     elves_group = ElvesGroup(elves)
-    print(elves_group)
 
     for i in range(10):
         elves_group.take_step()
-        print(elves_group)
 
-    print(elves_group.empty_tiles_covered())
+    result = elves_group.empty_tiles_covered()
+
+    print("Part 1:", result)
+
+
+def part2(file: str):
+
+    elves = get_elves(file)
+
+    elves_group = ElvesGroup(elves)
+
+    for i in range(10_000):
+        if (i + 1) % 10 == 0:
+            print("step", i + 1)
+        elves_group.get_proposses()
+        elves_group.get_next_posses()
+        if elves_group.get_indent_moves():
+            elves_group.move_to_next_posses()
+        else:
+            break
+
+    result = i + 1
+
+    print("Part 2:", result)
 
 
 def main(file: str):
     part1(file)
+    part2(file)
 
 
 if __name__ == "__main__":
-    main("data.txt")
+    main("example.txt")
