@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import List, Optional, Dict, Union
+from typing import List, Optional, Dict, Union, Set
 from functools import total_ordering, cache
 from pprint import pprint
 
@@ -15,6 +15,9 @@ class Pos:
 
     __repr__ = __str__
 
+    def __hash__(self):
+        return hash((self.row, self.col))
+
     def __eq__(self, other: Pos) -> bool:
         return (self.row == other.row) & (self.col == other.col)
 
@@ -26,12 +29,10 @@ class Pos:
         else:
             return False
 
+    @cache
     def close_posses_dict(self) -> Dict[str, Pos]:
         row, col = self.row, self.col
         return {
-            # "nw": Pos(row - 1, col - 1), "nn": Pos(row - 1, col    ), "ne": Pos(row - 1, col + 1),
-            # "ww": Pos(row    , col - 1), "__": Pos(row    , col    ), "ee": Pos(row    , col + 1),
-            # "sw": Pos(row + 1, col - 1), "ss": Pos(row + 1, col    ), "se": Pos(row + 1, col + 1),
             "nw": Pos(row - 1, col - 1),
             "nn": Pos(row - 1, col),
             "ne": Pos(row - 1, col + 1),
@@ -43,48 +44,66 @@ class Pos:
             "se": Pos(row + 1, col + 1),
         }
 
-    def close_posses(self) -> List[Pos]:
-        return [value for key, value in self.close_posses_dict().items() if key != "__"]
+    @cache
+    def close_posses(self) -> Set[Pos]:
+        return set(
+            [value for key, value in self.close_posses_dict().items() if key != "__"]
+        )
 
-    def nish_posses(self) -> List[Pos]:
-        return [value for key, value in self.close_posses_dict().items() if "n" in key]
+    @cache
+    def nish_posses(self) -> Set[Pos]:
+        return set(
+            [value for key, value in self.close_posses_dict().items() if "n" in key]
+        )
 
+    @cache
     def n_pos(self) -> Pos:
         return self.close_posses_dict()["nn"]
 
-    def sish_posses(self) -> List[Pos]:
-        return [value for key, value in self.close_posses_dict().items() if "s" in key]
+    @cache
+    def sish_posses(self) -> Set[Pos]:
+        return set(
+            [value for key, value in self.close_posses_dict().items() if "s" in key]
+        )
 
+    @cache
     def s_pos(self) -> Pos:
         return self.close_posses_dict()["ss"]
 
-    def wish_posses(self) -> List[Pos]:
-        return [value for key, value in self.close_posses_dict().items() if "w" in key]
+    @cache
+    def wish_posses(self) -> Set[Pos]:
+        return set(
+            [value for key, value in self.close_posses_dict().items() if "w" in key]
+        )
 
+    @cache
     def w_pos(self) -> Pos:
         return self.close_posses_dict()["ww"]
 
-    def eish_posses(self) -> List[Pos]:
-        return [value for key, value in self.close_posses_dict().items() if "e" in key]
+    @cache
+    def eish_posses(self) -> Set[Pos]:
+        return set(
+            [value for key, value in self.close_posses_dict().items() if "e" in key]
+        )
 
+    @cache
     def e_pos(self) -> Pos:
         return self.close_posses_dict()["ee"]
 
-    def xish_posses(self, x: str) -> List[Pos]:
-        return [value for key, value in self.close_posses_dict().items() if x in key]
+    @cache
+    def xish_posses(self, x: str) -> Set[Pos]:
+        return set(
+            [value for key, value in self.close_posses_dict().items() if x in key]
+        )
 
+    @cache
     def x_pos(self, x: str) -> Pos:
         return self.close_posses_dict()[x + x]
 
 
-def _doesnt_overlap(first: Union[Pos, List[Pos]], second: List[Pos]):
-    if isinstance(first, list):
-        doesnt_overlap = True
-        for first_pos in first:
-            if first_pos in second:
-                doesnt_overlap = False
-                break
-        return doesnt_overlap
+def _doesnt_overlap(first: Union[Pos, Set[Pos]], second: Set[Pos]):
+    if isinstance(first, set):
+        return set.intersection(first, second) == set()
     else:
         return first not in second
 
@@ -111,11 +130,11 @@ class Elve:
     def other_elves(self, other_elves: List[Elve]) -> None:
         self._other_elves = other_elves
 
-    def _get_posses_other_elves(self) -> List[Pos]:
+    def _get_posses_other_elves(self) -> Set[Pos]:
         posses_other_elves = []
         for elve in self._other_elves:
             posses_other_elves.append(elve.pos)
-        return posses_other_elves
+        return set(posses_other_elves)
 
     def get_propos(self) -> None:
         posses_other_elves = self._get_posses_other_elves()
@@ -132,11 +151,11 @@ class Elve:
         else:
             self.propos = self.pos
 
-    def _get_proposses_other_elves(self) -> List[Pos]:
+    def _get_proposses_other_elves(self) -> Set[Pos]:
         proposses_other_elves = []
         for elve in self._other_elves:
             proposses_other_elves.append(elve.propos)
-        return proposses_other_elves
+        return set(proposses_other_elves)
 
     def get_next_pos(self) -> None:
         proposses_other_elves = self._get_proposses_other_elves()
