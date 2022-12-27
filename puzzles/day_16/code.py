@@ -1,273 +1,259 @@
 from __future__ import annotations
-
-from typing import List, Optional
-from functools import total_ordering
+from typing import Dict, List, Tuple
 from pprint import pprint
-from collections import OrderedDict
 from math import inf
-from itertools import permutations
+from functools import partial, cache
 
 
-def get_data(file: str):
-    with open("./puzzles/day_16/" + file, mode="r") as in_file:
-        for line in in_file.readlines():
-            yield line.strip()
+def get_valves_neighbors_rates(
+    file: str,
+) -> Tuple[Dict[str, List[str], Dict[str, int]]]:
+    valves_neighbors = dict()
+    valves_rates = dict()
+    with open("./puzzles/day_16/" + file, mode="r") as input_file:
+        for line in input_file.readlines():
+            stripped_line = line.strip()
+            name = stripped_line[6:8]
+            rate = int(stripped_line.split("=")[1].split(";")[0])
+            neighbors = (
+                stripped_line.replace("valves", "valve").split("valve ")[1].split(", ")
+            )
+            valves_neighbors[name] = neighbors
+            valves_rates[name] = rate
+    return valves_neighbors, valves_rates
 
 
-def get_valves(file: str) -> List[Valve]:
+def calc_valves_dists(
+    initial_valve: str,
+    valves_neighbors: Dict[str, List[str]],
+    relevant_valves=None,
+) -> Dict[str, float]:
 
-    valves_graph_dict = dict()
+    unvisited_valves = list(valves_neighbors.keys())
+    distances = {valve: inf for valve in unvisited_valves}
+    visited_valves = []
 
-    for data in get_data(file):
-        valve_name_ppm_str, tunnel_str_list_str = (
-            data.replace("Valve ", "")
-            .replace(" has flow rate", "")
-            .replace(" tunnels lead to valves ", "")
-            .replace(" tunnel leads to valve ", "")
-        ).split(";")
-        valve_name, ppm_str = valve_name_ppm_str.split("=")
-        valve = Valve(valve_name, int(ppm_str))
-        tunnel_str_list = tunnel_str_list_str.split(", ")
-        valves_graph_dict[valve] = tunnel_str_list
+    current_valve = initial_valve
+    distances[current_valve] = 0
 
-    valves = []
+    while unvisited_valves:
 
-    for valve, tunnels_str_list in valves_graph_dict.items():
-        tunnels = []
-        for tunnels_str in tunnels_str_list:
-            for test_valve in valves_graph_dict.keys():
-                if test_valve.name == tunnels_str:
-                    tunnels.append(test_valve)
-        tunnels = list(reversed(sorted(tunnels)))
-        valve.tunnels = tunnels
-        valves.append(valve)
-        valves_graph_dict[valve] = tunnels
+        neighbors = valves_neighbors[current_valve]
+        unvisited_neighbors = [
+            neighbor for neighbor in neighbors if neighbor not in visited_valves
+        ]
 
-    valves = list(reversed(sorted(valves)))
+        for unvisited_neighbor in unvisited_neighbors:
+            if distances[current_valve] + 1 < distances[unvisited_neighbor]:
+                distances[unvisited_neighbor] = distances[current_valve] + 1
 
-    return valves
+        visited_valves.append(current_valve)
+        unvisited_valves.remove(current_valve)
 
+        next_possible_valves = [
+            valve for valve in unvisited_valves if distances[valve] < inf
+        ]
 
-@total_ordering
-class Valve:
-    def __init__(
-        self,
-        name: str,
-        ppm: int,
-    ) -> None:
-        self._name = name
-        self._ppm = ppm
-        self._open: bool = False
-        self._tunnels: Optional[List[Valve]] = None
+        if next_possible_valves != []:
+            current_valve = next_possible_valves[0]
 
-    @property
-    def name(self):
-        return self._name
+    del distances[initial_valve]
 
-    @property
-    def ppm(self):
-        return self._ppm
-
-    @property
-    def open(self):
-        return self._open
-
-    @open.setter
-    def open(self, true):
-        if self._open:
-            raise ValueError(f"Valve {self._name} is already open!")
-        self._open = True
-
-    @property
-    def is_closed(self):
-        return not (self._open)
-
-    @property
-    def tunnels(self):
-        return self._tunnels
-
-    @tunnels.setter
-    def tunnels(self, tunnels: List[Valve]):
-        self._tunnels = tunnels
-
-    def __eq__(self, other):
-        return self._name == other._name
-
-    def __lt__(self, other):
-        if self._ppm == other._ppm:
-            return self._name < other._name
-        else:
-            return self._ppm < other._ppm
-
-    def __contains__(self, others: List[Valve]):
-        for other in others:
-            if other == self:
-                return True
-        return False
-
-    def __hash__(self):
-        return hash(self._name)
-
-    def __str__(self):
-        return f"{self._name}{' ' if self._open else '['}{str(self._ppm).zfill(2).replace('00','__')}{' ' if self._open else ']'}"
-
-    __repr__ = __str__
-
-
-def get_distances(valve: Valve) -> OrderedDict[Valve]:
-
-    visited_valves: List[Valve] = []
-    unvisited_valves: List[Valve] = []
-    distances = OrderedDict()
-
-    def add_to_visited_valves(valve: Valve) -> None:
-        visited_valves.append(valve)
-
-    def add_to_unvisited_valves_if_not_visited(tunnels: List[Valve]) -> None:
-        for tunnel in tunnels:
-            if not (tunnel in visited_valves):
-                unvisited_valves.append(tunnel)
-                distances[tunnel] = inf
-
-    def update_distance_if_not_visited(valve: Valve, new_distance: int) -> None:
-        if valve in unvisited_valves:
-            current_distance = distances[valve]
-            if new_distance < current_distance:
-                distances[valve] = new_distance
-
-    add_to_unvisited_valves_if_not_visited([valve] + valve.tunnels)
-    update_distance_if_not_visited(valve, 0)
-
-    while unvisited_valves != []:
-        current_valve = unvisited_valves.pop(0)
-        current_distance = distances[current_valve]
-        current_tunnels = current_valve.tunnels
-        add_to_unvisited_valves_if_not_visited(current_tunnels)
-        for tunnel in current_tunnels:
-            update_distance_if_not_visited(tunnel, current_distance + 1)
-        add_to_visited_valves(current_valve)
+    if relevant_valves:
+        distances = {
+            key: value for key, value in distances.items() if key in relevant_valves
+        }
 
     return distances
 
 
-def get_relevant_distances(valve: Valve) -> OrderedDict[Valve]:
+def get_valves_dists_rates(
+    file, only_relevant=None
+) -> Tuple[Dict[Dict[str, int]], Dict[str, int]]:
+    valves_neighbors, valves_rates = get_valves_neighbors_rates(file)
+    valves_dists = {
+        valve: calc_valves_dists(valve, valves_neighbors)
+        for valve, neighbors in valves_neighbors.items()
+    }
 
-    relevant_distances = OrderedDict()
-    distances = get_distances(valve)
+    if only_relevant is not None:
+        if isinstance(only_relevant, str):
+            valves_dists = {
+                valve: {
+                    other_valve: distance
+                    for other_valve, distance in distances.items()
+                    if (valves_rates[other_valve] != 0) | (other_valve == only_relevant)
+                }
+                for valve, distances in valves_dists.items()
+                if (valves_rates[valve] != 0) | (valve == only_relevant)
+            }
+            valves_rates = {
+                valve: rate
+                for valve, rate in valves_rates.items()
+                if (rate != 0) | (valve == only_relevant)
+            }
+        elif isinstance(only_relevant, bool):
+            if only_relevant == True:
+                valves_dists = {
+                    valve: {
+                        other_valve: distance
+                        for other_valve, distance in distances.items()
+                        if (valves_rates[other_valve] != 0)
+                    }
+                    for valve, distances in valves_dists.items()
+                    if (valves_rates[valve] != 0)
+                }
+                valves_rates = {
+                    valve: rate for valve, rate in valves_rates.items() if (rate != 0)
+                }
 
-    for valve, distance in distances.items():
-        if valve.ppm > 0:
-            relevant_distances[valve] = distance
-
-    return relevant_distances
+    return valves_dists, valves_rates
 
 
-def maximise_pressure_released(
-    valve: Valve,
-    valves_visited: Optional[List[Valve]] = None,
-    initial_pressure_released: int = 0,
+def get_dists_here_next_dists(
+    valve: str, dists: Dict[str, Dict[str, int]]
+) -> Tuple[int, Dict[str, Dict[str, int]]]:
+
+    dists_here = dists[valve]
+    next_dists = {
+        valve_: {
+            valve__: distance
+            for valve__, distance in distances.items()
+            if valve__ != valve
+        }
+        for valve_, distances in dists.items()
+        if valve_ != valve
+    }
+
+    return dists_here, next_dists
+
+
+def get_rate_here_next_rates(
+    valve: str, rates: Dict[str, int]
+) -> Tuple[int, Dict[str, int]]:
+
+    rate_here = rates[valve]
+    next_rates = {valve_: rate for valve_, rate in rates.items() if valve_ != valve}
+
+    return rate_here, next_rates
+
+
+def get_max_pressure_released(
+    dists: Dict[str, Dict[str, int]],
+    rates: Dict[str, int],
+    valve: str = "AA",
     time_left: int = 30,
 ) -> int:
 
-    valve.relevant_distances = get_relevant_distances(valve)
+    # No time left to open the current valve and release some pressure from it
+    if time_left < 2:
+        return 0
 
-    if valves_visited is None:
-        valves_visited = []
+    # Still some time left to open the current valve and release some pressure form it
+    else:
 
-    max_pressure_released = initial_pressure_released
+        # Get rate of current valve and rates from next valves (excluding the current valve)
+        rate_here, next_rates = get_rate_here_next_rates(valve=valve, rates=rates)
 
-    unvisited_valves = [
-        valve_
-        for valve_ in valve.relevant_distances.keys()
-        if not (valve in valves_visited)
-    ]
+        # Get distances from the current valve to the neighboring valves
+        # and the distances from the other valves to their neighbors (excluding the current valve)
+        dists_here, next_dists = get_dists_here_next_dists(valve=valve, dists=dists)
 
-    relevant_valves = [
-        valve_
-        for valve_ in unvisited_valves
-        if valve.relevant_distances[valve_]
-        < time_left - 2  # 1 to move there + 1 to have an effect from opening
-    ]
+        # If the current valve can release pressure
+        # spend a minute to open it and
+        # release pressure from the minute thereafter until the end of time
+        # adding to the current pressure released
+        if rate_here != 0:
+            time_here = 1
+            pressure_released_here = (time_left - time_here) * rate_here
+        else:
+            time_here = 0
+            pressure_released_here = 0
 
-    if relevant_valves == []:
+        if dists_here == dict():
+            return pressure_released_here
+        else:
+            pressure_released_next = 0
+            for next_valve, next_dist in dists_here.items():
+                next_time = time_left - time_here - next_dist
+                pressure_release = get_max_pressure_released(
+                    dists=next_dists,
+                    rates=next_rates,
+                    valve=next_valve,
+                    time_left=next_time,
+                )
+                pressure_released_next = max(pressure_released_next, pressure_release)
+            return pressure_released_here + pressure_released_next
 
-        return max_pressure_released
+
+def release_max_pressure(
+    valve: str, dists: Dict[str, Dict[str, int]], rates: Dict[str, int], time_left
+) -> Tuple[str, int]:
+
+    if time_left <= 0:
+
+        return "", 0
 
     else:
 
-        for relevant_valve in relevant_valves:
+        dists_here, next_dists = get_dists_here_next_dists(valve, dists)
+        rate_here, next_rates = get_rate_here_next_rates(valve, rates)
 
-            time_for_travel = valve.relevant_distances[relevant_valve]
-            time_for_opening = 1
-            new_time_left = time_left - time_for_travel - time_for_opening
-
-            new_pressure_released = (
-                initial_pressure_released + relevant_valve.ppm * new_time_left
+        if rate_here > 0:
+            time_here = 1
+            pressure_here = (time_left - time_here) * rate_here
+            str_here = (
+                " "
+                + valve
+                + "@t="
+                + str(30 - (time_left - time_here))
+                + "/p="
+                + str(pressure_here)
             )
 
-            new_valves_visited = [relevant_valve] + valves_visited
+        else:
+            time_here = 0
+            pressure_here = 0
+            str_here = (
+                "" + valve + "@t=" + str(30 - time_left) + "/p=" + str(pressure_here)
+            )
 
-            next_new_pressure_released = new_pressure_released
+        next_pressure = 0
+        next_str = ""
 
-            for new_valve in relevant_valve.tunnels:
+        for next_valve, dist_to_next_valve in dists_here.items():
+            next_time_left = time_left - time_here - dist_to_next_valve
+            next_valve_str, next_valve_pressure = release_max_pressure(
+                valve=next_valve,
+                dists=next_dists,
+                rates=next_rates,
+                time_left=next_time_left,
+            )
+            if next_valve_pressure > next_pressure:
+                next_str = next_valve_str
+                next_pressure = next_valve_pressure
 
-                test_new_pressure_released = maximise_pressure_released(
-                    new_valve, new_valves_visited, new_pressure_released, new_time_left
-                )
-
-                if test_new_pressure_released > next_new_pressure_released:
-
-                    next_new_pressure_released = test_new_pressure_released
-
-            if new_pressure_released > max_pressure_released:
-
-                max_pressure_released = new_pressure_released
-
-        return max_pressure_released
+        return str_here + next_str, pressure_here + next_pressure
 
 
 def part1(file: str) -> None:
 
-    valves = get_valves(file)
+    current_valve = "AA"
+    dists, rates = get_valves_dists_rates(file, only_relevant=current_valve)
 
-    aa = valves[-1]
-    assert aa.name == "AA"
-    assert aa.ppm == 0
-    # Monkey patch distances
-    aa.relevant_distances = get_relevant_distances(aa)
+    print(release_max_pressure("AA", dists, rates, 30))
 
-    relevant_valves = [aa]
-
-    for relevant_valve in aa.relevant_distances:
-        # Monkey patch distances
-        relevant_valve.distances = get_relevant_distances(relevant_valve)
-        relevant_valves.append(relevant_valve)
-
-    max_pressure_released = maximise_pressure_released(relevant_valves[0])
-
-    print("Part 1", max_pressure_released)
-
-
-""" 
-    permutations_count = 0
-    for permutation in permutations(relevant_valves):
-        permutations_count += 1
-        if permutations_count % 1_000_000 == 0:
-            print(int(permutations_count / 1_000_000))
-    print(permutations_count)
- """
+    # 1434 is wrong
 
 
 def part2(file: str) -> None:
-    data = get_data(file)
     ...
 
 
 def main(file: str) -> None:
-
     part1(file)
     part2(file)
 
 
 if __name__ == "__main__":
-    main("example.txt")
+    main("data.txt")
