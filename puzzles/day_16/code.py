@@ -199,24 +199,20 @@ def release_max_pressure(
         dists_here, next_dists = get_dists_here_next_dists(valve, dists)
         rate_here, next_rates = get_rate_here_next_rates(valve, rates)
 
+        time_here = 0
+
         if rate_here > 0:
             time_here = 1
-            pressure_here = (time_left - time_here) * rate_here
-            str_here = (
-                " "
-                + valve
-                + "@t="
-                + str(30 - (time_left - time_here))
-                + "/p="
-                + str(pressure_here)
-            )
 
-        else:
-            time_here = 0
-            pressure_here = 0
-            str_here = (
-                "" + valve + "@t=" + str(30 - time_left) + "/p=" + str(pressure_here)
-            )
+        pressure_here = (time_left - time_here) * rate_here
+        str_here = (
+            " "
+            + valve
+            + "@t="
+            + str(30 - (time_left - time_here))
+            + "/p="
+            + str(pressure_here)
+        )
 
         next_pressure = 0
         next_str = ""
@@ -244,6 +240,7 @@ def part1(file: str) -> None:
     print(release_max_pressure("AA", dists, rates, 30))
 
     # 1434 is wrong
+    # 'AA@t=0/p=0 DD@t=2/p=560 BB@t=5/p=325 JJ@t=9/p=441 HH@t=17/p=286 EE@t=21/p=27 CC@t=24/p=12'
 
 
 def part2(file: str) -> None:
@@ -256,4 +253,4 @@ def main(file: str) -> None:
 
 
 if __name__ == "__main__":
-    main("data.txt")
+    main("example.txt")
