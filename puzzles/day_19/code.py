@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from functools import partial
+from pprint import pprint
 from typing import List, Dict, Tuple
 
 
@@ -152,15 +153,10 @@ def get_blueprints(file: str) -> BluePrints:
 
 def part1(file: str) -> None:
 
-    # blueprint = {
-    #    "OR": {"OR": 4},
-    #    "CL": {"OR": 2},
-    #    "OB": {"OR": 3, "CL": 14},
-    #    "GE": {"OR": 2, "OB": 7},
-    # }
-
     blueprints = get_blueprints(file)
     result = 0
+
+    # pprint(blueprints)
 
     for num, blueprint in blueprints.items():
 
@@ -171,12 +167,12 @@ def part1(file: str) -> None:
         max_crushed_geodes = get_max_crushed_geodes(robots, materials, time_left=24)
 
         print(
-            f"{num}. Blueprint can crush {max_crushed_geodes} geodes, having a quality level of {num * max_crushed_geodes}"
+            f"With blueprint {num}, you can crush up to {max_crushed_geodes} geodes, which gives a quality level of {num * max_crushed_geodes}"
         )
 
         result += num * max_crushed_geodes
 
-    print("Part 1", result)
+    print("Part 1: Total quality level is", result)
 
 
 def part2(file: str) -> None:
@@ -194,4 +190,4 @@ def main(file: str) -> None:
 
 
 if __name__ == "__main__":
-    main("example.txt")
+    main("data.txt")
