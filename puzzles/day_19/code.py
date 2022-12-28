@@ -29,23 +29,28 @@ YIELDS = {
     "GE": 0,
 }
 
-BUILDABLE: Dict[str, bool] = {
+# Iteration
+YIELDS = {ROBOT: YIELDS[ROBOT] + EXISTANTS[ROBOT] for ROBOT in ["OR", "CL", "OB", "GE"]}
+YIELDS = {ROBOT: YIELDS[ROBOT] + EXISTANTS[ROBOT] for ROBOT in ["OR", "CL", "OB", "GE"]}
+YIELDS = {ROBOT: YIELDS[ROBOT] + EXISTANTS[ROBOT] for ROBOT in ["OR", "CL", "OB", "GE"]}
+YIELDS = {ROBOT: YIELDS[ROBOT] + EXISTANTS[ROBOT] for ROBOT in ["OR", "CL", "OB", "GE"]}
+BUILDABLES: Dict[str, bool] = {
     THIS_ROBOT: all(
         [EXISTANTS[ROBOT] != 0 for ROBOT, COSTS in THIS_COSTS.items() if COSTS != 0]
     )
     for THIS_ROBOT, THIS_COSTS in COSTS.items()
 }
-AFFORDABLE: Dict[str, bool] = {
-    THIS_ROBOT: all([YIELDS[ROBOT] >= COSTS for ROBOT, COSTS in THIS_COSTS.items()])
-    for THIS_ROBOT, THIS_COSTS in COSTS.items()
+AFFORDABLES: Dict[str, bool] = {
+    ROBOT: all(
+        [YIELDS[THIS_ROBOT] >= THIS_COST for THIS_ROBOT, THIS_COST in COST.items()]
+    )
+    for ROBOT, COST in COSTS.items()
 }
 
 
 def part1(file: str) -> None:
-    data = get_data(file)
-    print(
-        "Part 1:",
-    )
+
+    print("Part 1:", YIELDS, BUILDABLES, AFFORDABLES)
 
 
 def part2(file: str) -> None:
