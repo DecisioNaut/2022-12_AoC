@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Optional
 from pprint import pprint
 from math import inf
 from functools import partial, cache
@@ -138,98 +138,52 @@ def get_rate_here_next_rates(
     return rate_here, next_rates
 
 
-def get_max_pressure_released(
+def release_max_pressure(
+    valve: str,
     dists: Dict[str, Dict[str, int]],
     rates: Dict[str, int],
-    valve: str = "AA",
-    time_left: int = 30,
-) -> int:
-
-    # No time left to open the current valve and release some pressure from it
-    if time_left < 2:
-        return 0
-
-    # Still some time left to open the current valve and release some pressure form it
-    else:
-
-        # Get rate of current valve and rates from next valves (excluding the current valve)
-        rate_here, next_rates = get_rate_here_next_rates(valve=valve, rates=rates)
-
-        # Get distances from the current valve to the neighboring valves
-        # and the distances from the other valves to their neighbors (excluding the current valve)
-        dists_here, next_dists = get_dists_here_next_dists(valve=valve, dists=dists)
-
-        # If the current valve can release pressure
-        # spend a minute to open it and
-        # release pressure from the minute thereafter until the end of time
-        # adding to the current pressure released
-        if rate_here != 0:
-            time_here = 1
-            pressure_released_here = (time_left - time_here) * rate_here
-        else:
-            time_here = 0
-            pressure_released_here = 0
-
-        if dists_here == dict():
-            return pressure_released_here
-        else:
-            pressure_released_next = 0
-            for next_valve, next_dist in dists_here.items():
-                next_time = time_left - time_here - next_dist
-                pressure_release = get_max_pressure_released(
-                    dists=next_dists,
-                    rates=next_rates,
-                    valve=next_valve,
-                    time_left=next_time,
-                )
-                pressure_released_next = max(pressure_released_next, pressure_release)
-            return pressure_released_here + pressure_released_next
-
-
-def release_max_pressure(
-    valve: str, dists: Dict[str, Dict[str, int]], rates: Dict[str, int], time_left
+    time_left,
+    total_time: Optional[int] = None,
 ) -> Tuple[str, int]:
 
-    if time_left <= 0:
+    if total_time is None:
+        total_time = time_left
 
-        return "", 0
+    dists_here, next_dists = get_dists_here_next_dists(valve, dists)
+    rate_here, next_rates = get_rate_here_next_rates(valve, rates)
 
-    else:
+    time_here = 0
 
-        dists_here, next_dists = get_dists_here_next_dists(valve, dists)
-        rate_here, next_rates = get_rate_here_next_rates(valve, rates)
+    if rate_here > 0:
+        time_here = 1
 
-        time_here = 0
+    pressure_here = (time_left - time_here) * rate_here
+    str_here = (
+        " "
+        + valve
+        + "@t="
+        + str(total_time - (time_left - time_here))
+        + "/p="
+        + str(pressure_here)
+    )
 
-        if rate_here > 0:
-            time_here = 1
+    next_pressure = 0
+    next_str = ""
 
-        pressure_here = (time_left - time_here) * rate_here
-        str_here = (
-            " "
-            + valve
-            + "@t="
-            + str(30 - (time_left - time_here))
-            + "/p="
-            + str(pressure_here)
+    for next_valve, dist_to_next_valve in dists_here.items():
+        next_time_left = time_left - time_here - dist_to_next_valve
+        next_valve_str, next_valve_pressure = release_max_pressure(
+            valve=next_valve,
+            dists=next_dists,
+            rates=next_rates,
+            time_left=next_time_left,
+            total_time=total_time,
         )
+        if next_valve_pressure >= next_pressure:
+            next_str = next_valve_str
+            next_pressure = next_valve_pressure
 
-        next_pressure = 0
-        next_str = ""
-
-        for next_valve, dist_to_next_valve in dists_here.items():
-            next_time_left = time_left - time_here - dist_to_next_valve
-            next_valve_str, next_valve_pressure = release_max_pressure(
-                valve=next_valve,
-                dists=next_dists,
-                rates=next_rates,
-                time_left=next_time_left,
-            )
-            if next_valve_pressure > next_pressure:
-                next_str = next_valve_str
-                next_pressure = next_valve_pressure
-
-        return str_here + next_str, pressure_here + next_pressure
+    return str_here + next_str, pressure_here + next_pressure
 
 
 def part1(file: str) -> None:
@@ -237,7 +191,7 @@ def part1(file: str) -> None:
     current_valve = "AA"
     dists, rates = get_valves_dists_rates(file, only_relevant=current_valve)
 
-    print(release_max_pressure("AA", dists, rates, 30))
+    print(release_max_pressure(current_valve, dists, rates, 30))
 
     # 1434 is wrong
     # 'AA@t=0/p=0 DD@t=2/p=560 BB@t=5/p=325 JJ@t=9/p=441 HH@t=17/p=286 EE@t=21/p=27 CC@t=24/p=12'
@@ -253,4 +207,4 @@ def main(file: str) -> None:
 
 
 if __name__ == "__main__":
-    main("example.txt")
+    main("data.txt")
