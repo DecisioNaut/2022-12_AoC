@@ -5,7 +5,7 @@ from typing import List, Dict, Tuple
 
 
 def get_data(file: str):
-    with open("./puzzles/day_/" + file, mode="r") as in_file:
+    with open("./puzzles/day_19/" + file, mode="r") as in_file:
         for line in in_file.readlines():
             yield line.strip()
 
@@ -29,28 +29,31 @@ Buildables = List[str]
 
 
 def general_get_buildables(blueprint: BluePrint, robots: Robots) -> Buildables:
-    return [
+    unsorted_buildables = [
         robot
         for robot, costs in blueprint.items()
-        if all(
-            [robots[material] != 0 for material, cost in costs.items()]
-        )  # if cost != 0])
+        if all([robots[material] != 0 for material, cost in costs.items()])
     ]
+    sorted_buildables = [
+        robot for robot in ["GE", "OB", "CL", "OR"] if robot in unsorted_buildables
+    ]
+
+    return sorted_buildables
 
 
 Affordables = Dict[str, bool]
 
 
-def general_get_affordables(blueprint: BluePrint, materials: Materials) -> Affordables:
+def general_get_affordables(
+    blueprint: BluePrint, materials: Materials, buildables: Buildables
+) -> Affordables:
     return [
         robot
-        for robot in ["OR", "CL", "OB", "GE"]
+        for robot in buildables  # ["OR", "CL", "OB", "GE"]
         if all(
             [
                 materials[material] >= blueprint[robot][material]
                 for material in blueprint[robot].keys()
-                # materials[material] >= blueprint[robot][material]
-                # for material in ["OR", "CL", "OB", "GE"]
             ]
         )
     ]
@@ -60,22 +63,22 @@ def general_use_materials_to_make_robot(
     blueprint: BluePrint, robots: Robots, materials: Materials, robot: str
 ) -> Tuple[Robots, Materials]:
 
-    costs = blueprint[robot]
-
-    materials_result = {
-        material: amount if material not in costs.keys() else amount - costs[material]
-        for material, amount in materials.items()
-    }
-
     robots_result = {
         robot_: robots[robot_] + 1 if robot_ == robot else robots[robot_]
         for robot_ in ["OR", "CL", "OB", "GE"]
     }
 
+    materials_result = {
+        material: amount
+        if material not in blueprint[robot].keys()
+        else amount - blueprint[robot][material]
+        for material, amount in materials.items()
+    }
+
     return robots_result, materials_result
 
 
-def get_max_crushed_geodes_fun(blueprint: BluePrint):
+def get_max_crushed_geodes_fun(blueprint: BluePrint) -> int:
 
     get_buildables = partial(general_get_buildables, blueprint)
     get_affordables = partial(general_get_affordables, blueprint)
@@ -96,7 +99,7 @@ def get_max_crushed_geodes_fun(blueprint: BluePrint):
             robots_ = robots
             materials_ = materials
             for time in range(time_left - 1, -1, -1):
-                affordables = get_affordables(materials_)
+                affordables = get_affordables(materials_, buildables)
                 materials_ = make_materials(robots_, materials_)
                 if robot in affordables:
                     robots_, materials_ = use_materials_to_make_robot(
@@ -113,38 +116,81 @@ def get_max_crushed_geodes_fun(blueprint: BluePrint):
     return get_max_crushed_geodes
 
 
+BluePrints = Dict[int, BluePrint]
+
+
+def get_blueprints(file: str) -> BluePrints:
+
+    blueprints: BluePrint = dict()
+
+    for num, data in enumerate(get_data(file), 1):
+        robots_costs_array = (
+            data.split(":")[1]
+            .replace("Each ", "")
+            .replace(" robot costs ", ":")
+            .replace(" and ", ",")
+            .replace(" ore", " OR")
+            .replace(" clay", " CL")
+            .replace(" obsidian", " OB")
+            .replace(" geode", " GE")[0:-1]
+            .split(".")
+        )
+        robot_costs_dict = dict()
+        for robot_costs in robots_costs_array:
+            robot_costs = robot_costs.strip()
+            robot, costs = robot_costs.split(":")
+            costs = costs.split(",")
+            cost_dict = dict()
+            for cost in costs:
+                amount_str, material = cost.split(" ")
+                amount = int(amount_str)
+                cost_dict[material] = amount
+            robot_costs_dict[robot] = cost_dict
+        blueprints[num] = robot_costs_dict
+    return blueprints
+
+
 def part1(file: str) -> None:
 
-    robots = {"OR": 1, "CL": 0, "OB": 0, "GE": 0}
-    materials = {"OR": 0, "CL": 0, "OB": 0, "GE": 0}
+    # blueprint = {
+    #    "OR": {"OR": 4},
+    #    "CL": {"OR": 2},
+    #    "OB": {"OR": 3, "CL": 14},
+    #    "GE": {"OR": 2, "OB": 7},
+    # }
 
-    blueprint = {
-        "OR": {"OR": 4},
-        "CL": {"OR": 2},
-        "OB": {"OR": 3, "CL": 14},
-        "GE": {"OR": 2, "OB": 7},
-        # "OR": {"OR": 4, "CL": 0, "OB": 0, "GE": 0},
-        # "CL": {"OR": 2, "CL": 0, "OB": 0, "GE": 0},
-        # "OB": {"OR": 3, "CL": 14, "OB": 0, "GE": 0},
-        # "GE": {"OR": 2, "CL": 0, "OB": 7, "GE": 0},
-    }
+    blueprints = get_blueprints(file)
+    result = 0
 
-    get_max_crushed_geodes = get_max_crushed_geodes_fun(blueprint)
+    for num, blueprint in blueprints.items():
 
-    print(get_max_crushed_geodes(robots, materials, time_left=23))
+        robots = {"OR": 1, "CL": 0, "OB": 0, "GE": 0}
+        materials = {"OR": 0, "CL": 0, "OB": 0, "GE": 0}
+
+        get_max_crushed_geodes = get_max_crushed_geodes_fun(blueprint)
+        max_crushed_geodes = get_max_crushed_geodes(robots, materials, time_left=24)
+
+        print(
+            f"{num}. Blueprint can crush {max_crushed_geodes} geodes, having a quality level of {num * max_crushed_geodes}"
+        )
+
+        result += num * max_crushed_geodes
+
+    print("Part 1", result)
 
 
 def part2(file: str) -> None:
-    data = get_data(file)
-    print(
-        "Part 2:",
-    )
+    # data = get_data(file)
+    # print(
+    #    "Part 2:",
+    # )
+    ...
 
 
 def main(file: str) -> None:
 
     part1(file)
-    part2(file)
+    # part2(file)
 
 
 if __name__ == "__main__":
