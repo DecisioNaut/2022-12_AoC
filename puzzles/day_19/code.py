@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from functools import partial
-from pprint import pprint
 from typing import List, Dict, Tuple
 
 
@@ -50,7 +49,7 @@ def general_get_affordables(
 ) -> Affordables:
     return [
         robot
-        for robot in buildables  # ["OR", "CL", "OB", "GE"]
+        for robot in buildables
         if all(
             [
                 materials[material] >= blueprint[robot][material]
@@ -155,8 +154,6 @@ def part1(file: str) -> None:
 
     blueprints = get_blueprints(file)
     result = 0
-
-    # pprint(blueprints)
 
     for num, blueprint in blueprints.items():
 
