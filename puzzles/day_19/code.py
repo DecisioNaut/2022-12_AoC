@@ -163,7 +163,7 @@ def part1(file: str) -> None:
         materials = {"OR": 0, "CL": 0, "OB": 0, "GE": 0}
 
         get_max_crushed_geodes = get_max_crushed_geodes_fun(blueprint)
-        max_crushed_geodes = get_max_crushed_geodes(robots, materials, time_left=24)
+        max_crushed_geodes = get_max_crushed_geodes(robots, materials, 24)
 
         print(
             f"With blueprint {num}, you can crush up to {max_crushed_geodes} geodes, which gives a quality level of {num * max_crushed_geodes}"
