@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from functools import partial
 from typing import List, Dict, Tuple
-from copy import copy, deepcopy
 
 
 def get_data(file: str):
@@ -33,7 +32,9 @@ def general_get_buildables(blueprint: BluePrint, robots: Robots) -> Buildables:
     return [
         robot
         for robot, costs in blueprint.items()
-        if all([robots[robot_] != 0 for robot_, cost in costs.items() if cost != 0])
+        if all(
+            [robots[material] != 0 for material, cost in costs.items()]
+        )  # if cost != 0])
     ]
 
 
@@ -46,8 +47,10 @@ def general_get_affordables(blueprint: BluePrint, materials: Materials) -> Affor
         for robot in ["OR", "CL", "OB", "GE"]
         if all(
             [
-                materials[robot_] >= blueprint[robot][robot_]
-                for robot_ in ["OR", "CL", "OB", "GE"]
+                materials[material] >= blueprint[robot][material]
+                for material in blueprint[robot].keys()
+                # materials[material] >= blueprint[robot][material]
+                # for material in ["OR", "CL", "OB", "GE"]
             ]
         )
     ]
@@ -60,7 +63,8 @@ def general_use_materials_to_make_robot(
     costs = blueprint[robot]
 
     materials_result = {
-        material: amount - costs[material] for material, amount in materials.items()
+        material: amount if material not in costs.keys() else amount - costs[material]
+        for material, amount in materials.items()
     }
 
     robots_result = {
@@ -89,10 +93,9 @@ def get_max_crushed_geodes_fun(blueprint: BluePrint):
 
         for robot in buildables:
             crushed_geodes = 0
-            robots_ = deepcopy(robots)
-            materials_ = deepcopy(materials)
-            time_left_ = time_left
-            for time in range(time_left_ - 1, -1, -1):
+            robots_ = robots
+            materials_ = materials
+            for time in range(time_left - 1, -1, -1):
                 affordables = get_affordables(materials_)
                 materials_ = make_materials(robots_, materials_)
                 if robot in affordables:
@@ -116,15 +119,19 @@ def part1(file: str) -> None:
     materials = {"OR": 0, "CL": 0, "OB": 0, "GE": 0}
 
     blueprint = {
-        "OR": {"OR": 4, "CL": 0, "OB": 0, "GE": 0},
-        "CL": {"OR": 2, "CL": 0, "OB": 0, "GE": 0},
-        "OB": {"OR": 3, "CL": 14, "OB": 0, "GE": 0},
-        "GE": {"OR": 2, "CL": 0, "OB": 7, "GE": 0},
+        "OR": {"OR": 4},
+        "CL": {"OR": 2},
+        "OB": {"OR": 3, "CL": 14},
+        "GE": {"OR": 2, "OB": 7},
+        # "OR": {"OR": 4, "CL": 0, "OB": 0, "GE": 0},
+        # "CL": {"OR": 2, "CL": 0, "OB": 0, "GE": 0},
+        # "OB": {"OR": 3, "CL": 14, "OB": 0, "GE": 0},
+        # "GE": {"OR": 2, "CL": 0, "OB": 7, "GE": 0},
     }
 
     get_max_crushed_geodes = get_max_crushed_geodes_fun(blueprint)
 
-    print(get_max_crushed_geodes(robots, materials, time_left=24))
+    print(get_max_crushed_geodes(robots, materials, time_left=23))
 
 
 def part2(file: str) -> None:
