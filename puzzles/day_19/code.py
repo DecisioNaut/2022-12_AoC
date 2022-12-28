@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from functools import partial
 from typing import List, Dict, Tuple
-from copy import deepcopy
+from copy import copy, deepcopy
 
 
 def get_data(file: str):
@@ -71,33 +71,43 @@ def general_use_materials_to_make_robot(
     return robots_result, materials_result
 
 
-def general_get_max_crushed_geodes(
-    blueprint: BluePrint, robots: Robots, materials: Materials, time_left: int = 24
-) -> int:
+def get_max_crushed_geodes_fun(blueprint: BluePrint):
 
-    max_crushed_geodes = get_crushed_geodes(materials)
+    get_buildables = partial(general_get_buildables, blueprint)
+    get_affordables = partial(general_get_affordables, blueprint)
+    use_materials_to_make_robot = partial(
+        general_use_materials_to_make_robot, blueprint
+    )
 
-    buildables = general_get_buildables(blueprint, robots)
+    def get_max_crushed_geodes(
+        robots: Robots, materials: Materials, time_left: int = 24
+    ) -> int:
 
-    for robot in buildables:
-        crushed_geodes = 0
-        robots_ = deepcopy(robots)
-        materials_ = deepcopy(materials)
-        time_left_ = time_left
-        for time in range(time_left_ - 1, -1, -1):
-            affordables = general_get_affordables(blueprint, materials_)
-            materials_ = make_materials(robots_, materials_)
-            if robot in affordables:
-                robots_, materials_ = general_use_materials_to_make_robot(
-                    blueprint, robots_, materials_, robot
-                )
-                crushed_geodes = general_get_max_crushed_geodes(
-                    blueprint, robots_, materials_, time_left=time
-                )
-                break
-        max_crushed_geodes = max(crushed_geodes, max_crushed_geodes)
+        max_crushed_geodes = get_crushed_geodes(materials)
 
-    return max_crushed_geodes
+        buildables = get_buildables(robots)
+
+        for robot in buildables:
+            crushed_geodes = 0
+            robots_ = deepcopy(robots)
+            materials_ = deepcopy(materials)
+            time_left_ = time_left
+            for time in range(time_left_ - 1, -1, -1):
+                affordables = get_affordables(materials_)
+                materials_ = make_materials(robots_, materials_)
+                if robot in affordables:
+                    robots_, materials_ = use_materials_to_make_robot(
+                        robots_, materials_, robot
+                    )
+                    crushed_geodes = get_max_crushed_geodes(
+                        robots_, materials_, time_left=time
+                    )
+                    break
+            max_crushed_geodes = max(crushed_geodes, max_crushed_geodes)
+
+        return max_crushed_geodes
+
+    return get_max_crushed_geodes
 
 
 def part1(file: str) -> None:
@@ -112,7 +122,9 @@ def part1(file: str) -> None:
         "GE": {"OR": 2, "CL": 0, "OB": 7, "GE": 0},
     }
 
-    print(general_get_max_crushed_geodes(blueprint, robots, materials, time_left=24))
+    get_max_crushed_geodes = get_max_crushed_geodes_fun(blueprint)
+
+    print(get_max_crushed_geodes(robots, materials, time_left=24))
 
 
 def part2(file: str) -> None:
