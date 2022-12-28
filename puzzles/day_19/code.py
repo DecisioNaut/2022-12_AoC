@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from functools import partial
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Callable, Optional
 
 
 def get_data(file: str):
@@ -41,7 +41,7 @@ def general_get_buildables(blueprint: BluePrint, robots: Robots) -> Buildables:
     return sorted_buildables
 
 
-Affordables = Dict[str, bool]
+Affordables = List[str]
 
 
 def general_get_affordables(
@@ -78,7 +78,9 @@ def general_use_materials_to_make_robot(
     return robots_result, materials_result
 
 
-def get_max_crushed_geodes_fun(blueprint: BluePrint) -> int:
+def get_max_crushed_geodes_fun(
+    blueprint: BluePrint,
+) -> Callable[[Robots, Materials, int], int]:
 
     get_buildables = partial(general_get_buildables, blueprint)
     get_affordables = partial(general_get_affordables, blueprint)
@@ -121,7 +123,7 @@ BluePrints = Dict[int, BluePrint]
 
 def get_blueprints(file: str) -> BluePrints:
 
-    blueprints: BluePrint = dict()
+    blueprints: BluePrints = dict()
 
     for num, data in enumerate(get_data(file), 1):
         robots_costs_array = (
