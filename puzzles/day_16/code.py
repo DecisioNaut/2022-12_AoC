@@ -146,6 +146,9 @@ def release_max_pressure(
     total_time: Optional[int] = None,
 ) -> Tuple[str, int]:
 
+    # if time_left < 2:
+    #     return "", 0
+
     if total_time is None:
         total_time = time_left
 
@@ -171,7 +174,12 @@ def release_max_pressure(
     next_str = ""
 
     for next_valve, dist_to_next_valve in dists_here.items():
+
         next_time_left = time_left - time_here - dist_to_next_valve
+
+        if next_time_left < 2:
+            continue
+
         next_valve_str, next_valve_pressure = release_max_pressure(
             valve=next_valve,
             dists=next_dists,
@@ -179,6 +187,7 @@ def release_max_pressure(
             time_left=next_time_left,
             total_time=total_time,
         )
+
         if next_valve_pressure >= next_pressure:
             next_str = next_valve_str
             next_pressure = next_valve_pressure
@@ -191,10 +200,14 @@ def part1(file: str) -> None:
     current_valve = "AA"
     dists, rates = get_valves_dists_rates(file, only_relevant=current_valve)
 
+    pprint(dists)
+
     print(release_max_pressure(current_valve, dists, rates, 30))
 
     # 1434 is wrong
-    # 'AA@t=0/p=0 DD@t=2/p=560 BB@t=5/p=325 JJ@t=9/p=441 HH@t=17/p=286 EE@t=21/p=27 CC@t=24/p=12'
+    # AA@t=0/p=0 UM@t=3/p=135 VO@t=7/p=138 JF@t=10/p=200
+    # AH@t=14/p=368 HZ@t=17/p=260 VR@t=20/p=240 GL@t=24/p=66 XN@t=27/p=27'
+    # 1434)
 
 
 def part2(file: str) -> None:
