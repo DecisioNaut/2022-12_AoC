@@ -203,4 +203,4 @@ def main(file: str) -> None:
 
 
 if __name__ == "__main__":
-    main("example.txt")
+    main("data.txt")

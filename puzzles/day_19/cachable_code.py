@@ -199,21 +199,6 @@ def get_affordables(blueprint: BluePrint, materials: Materials) -> Affordables:
 
 
 @cache
-def didnt_buys(blueprint: BluePrint, materials: Materials) -> bool:
-
-    blueprint_dict = blueprint_to_dict(blueprint)
-    materials_dict = materials_to_dict(materials)
-
-    didnt_buys = all(
-        costs_dict[material] < materials_dict[material]
-        for _, costs_dict in blueprint_dict.items()
-        for material in costs_dict.keys()
-    )
-
-    return didnt_buys
-
-
-@cache
 def get_states_next_minute_from_state(blueprint: BluePrint, state: State) -> States:
 
     next_minute_set: States_Set = set()
@@ -243,7 +228,6 @@ def get_states_next_minute(blueprint: BluePrint, states: States) -> States:
         state_next_minute
         for state in states
         for state_next_minute in get_states_next_minute_from_state(blueprint, state)
-        if not didnt_buys(blueprint, state_next_minute[1])
     )
 
 
@@ -273,11 +257,16 @@ def part1(file: str) -> None:
 
         for time in range(1, time_left + 1):
             states = get_states_next_minute(blueprint, states)
-            print(num, time, len(states), get_max_geodes_from_states(states))
+            print(f"Blueprint {num} @ {time}min has {len(states)} states...")
+
+        max_geodes = get_max_geodes_from_states(states)
+
+        print(
+            f"With blueprint {num}, you can crush up to {max_geodes} geodes in {time_left} mins, which gives a quality level of {num * max_geodes}"
+        )
 
         get_buildables.cache_clear()
         get_affordables.cache_clear()
-        didnt_buys.cache_clear()
         use_materials_to_make_robot.cache_clear()
         get_states_next_minute_from_state.cache_clear()
 
@@ -303,11 +292,15 @@ def part2(file: str) -> None:
 
         for time in range(1, time_left + 1):
             states = get_states_next_minute(blueprint, states)
-            print(num, time, len(states), get_max_geodes_from_states(states))
+
+        max_geodes = get_max_geodes_from_states(states)
+
+        print(
+            f"With blueprint {num}, you can crush up to {max_geodes} geodes in {time_left} mins, which gives a quality level of {num * max_geodes}"
+        )
 
         get_buildables.cache_clear()
         get_affordables.cache_clear()
-        didnt_buys.cache_clear()
         use_materials_to_make_robot.cache_clear()
         get_states_next_minute_from_state.cache_clear()
 
