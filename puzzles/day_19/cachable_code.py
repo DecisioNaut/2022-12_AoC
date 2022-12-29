@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from functools import cache
+from functools import cache, lru_cache
 from pprint import pprint
-from typing import Tuple, FrozenSet, Dict, Literal, List
+from typing import Tuple, FrozenSet, Dict, Literal, List, Set
 
 Robot = Literal["OR", "CL", "OB", "GE"]
 Robots = FrozenSet[Tuple[Robot, int]]
@@ -23,9 +23,11 @@ BluePrints_Dict = Dict[int, BluePrint_Dict]
 
 Buildables = FrozenSet[Robot]
 Affordables = Buildables
+DidntBuys = Buildables
 
 State = Tuple[Robots, Materials]
 States = FrozenSet[State]
+States_Set = Set[Tuple[Robots, Materials]]
 
 
 @cache
@@ -128,7 +130,7 @@ def make_materials(robots: Robots, materials: Materials) -> Materials:
     materials_dict = materials_to_dict(materials)
 
     new_materials_dict: Materials_Dict = {
-        material: (amount + robots_dict[material])
+        material: amount + robots_dict[material]
         for material, amount in materials_dict.items()
     }
 
@@ -136,45 +138,8 @@ def make_materials(robots: Robots, materials: Materials) -> Materials:
 
 
 @cache
-def get_buildables(blueprint: BluePrint, robots: Robots) -> Buildables:
-
-    blueprint_dict = blueprint_to_dict(blueprint)
-    robots_dict = robots_to_dict(robots)
-
-    return frozenset(
-        [
-            robot
-            for robot, costs in blueprint_dict.items()
-            if all([robots_dict[material] != 0 for material, _ in costs.items()])
-        ]
-    )
-
-
-@cache
-def get_affordables(
-    blueprint: BluePrint, materials: Materials, buildables: Buildables
-) -> Affordables:
-
-    blueprint_dict = blueprint_to_dict(blueprint)
-    materials_dict = materials_to_dict(materials)
-
-    return frozenset(
-        [
-            robot
-            for robot in buildables
-            if all(
-                [
-                    materials_dict[material] >= blueprint_dict[robot][material]
-                    for material in blueprint_dict[robot].keys()
-                ]
-            )
-        ]
-    )
-
-
-@cache
 def use_materials_to_make_robot(
-    blueprint: BluePrint, robots: Robots, materials: Materials, robot: Robot
+    blueprint: BluePrint, robots: Robots, materials: Materials, robot_to_make: Robot
 ) -> Tuple[Robots, Materials]:
 
     blueprint_dict = blueprint_to_dict(blueprint)
@@ -182,14 +147,14 @@ def use_materials_to_make_robot(
     materials_dict = materials_to_dict(materials)
 
     robots_result_dict: Robots_Dict = {
-        robot_: robots_dict[robot_] + 1 if robot_ == robot else robots_dict[robot_]
-        for robot_ in robots_dict.keys()
+        robot: robots_dict[robot] + 1 if robot == robot_to_make else robots_dict[robot]
+        for robot in robots_dict.keys()
     }
 
     materials_result_dict: Materials_Dict = {
         material: amount
-        if material not in blueprint_dict[robot].keys()
-        else amount - blueprint_dict[robot][material]
+        if material not in blueprint_dict[robot_to_make].keys()
+        else amount - blueprint_dict[robot_to_make][material]
         for material, amount in materials_dict.items()
     }
 
@@ -199,43 +164,90 @@ def use_materials_to_make_robot(
 
 
 @cache
+def get_buildables(blueprint: BluePrint, robots: Robots) -> Buildables:
+
+    blueprint_dict = blueprint_to_dict(blueprint)
+    robots_dict = robots_to_dict(robots)
+
+    buildables = frozenset(
+        robot
+        for robot, costs in blueprint_dict.items()
+        if all([robots_dict[material] != 0 for material, _ in costs.items()])
+    )
+
+    return buildables
+
+
+@cache
+def get_affordables(blueprint: BluePrint, materials: Materials) -> Affordables:
+
+    blueprint_dict = blueprint_to_dict(blueprint)
+    materials_dict = materials_to_dict(materials)
+
+    affordables = frozenset(
+        robot
+        for robot, costs_dict in blueprint_dict.items()
+        if (
+            all(
+                costs_dict[material] <= materials_dict[material]
+                for material in costs_dict.keys()
+            )
+        )
+    )
+
+    return affordables
+
+
+@cache
+def didnt_buys(blueprint: BluePrint, materials: Materials) -> bool:
+
+    blueprint_dict = blueprint_to_dict(blueprint)
+    materials_dict = materials_to_dict(materials)
+
+    didnt_buys = all(
+        costs_dict[material] < materials_dict[material]
+        for _, costs_dict in blueprint_dict.items()
+        for material in costs_dict.keys()
+    )
+
+    return didnt_buys
+
+
+@cache
 def get_states_next_minute_from_state(blueprint: BluePrint, state: State) -> States:
 
-    next_robots_list: List[Robots] = []
-    next_materials_list: List[Materials] = []
+    next_minute_set: States_Set = set()
 
     robots, materials = state
-
     buildables = get_buildables(blueprint, robots)
-    affordables = get_affordables(blueprint, materials, buildables)
-    intermediate_materials = make_materials(robots, materials)
+    affordables = get_affordables(blueprint, materials)
+    materials = make_materials(robots, materials)
 
-    if affordables:
-        for affordable in affordables:
+    for robot in buildables:
+
+        if robot in affordables:
             next_robots, next_materials = use_materials_to_make_robot(
-                blueprint, robots, intermediate_materials, affordable
+                blueprint, robots, materials, robot
             )
-            next_robots_list.append(next_robots)
-            next_materials_list.append(next_materials)
-    else:
-        next_robots_list.append(robots)
-        next_materials_list.append(intermediate_materials)
+            next_minute_set = next_minute_set.union(
+                tuple([(next_robots, next_materials)])
+            )
+        else:
+            next_minute_set = next_minute_set.union(tuple([(robots, materials)]))
 
-    return frozenset(zip(next_robots_list, next_materials_list))
+    return frozenset(next_minute_set)
 
 
 def get_states_next_minute(blueprint: BluePrint, states: States) -> States:
     return frozenset(
-        [
-            state_next_minute
-            for state in states
-            for state_next_minute in get_states_next_minute_from_state(blueprint, state)
-        ]
+        state_next_minute
+        for state in states
+        for state_next_minute in get_states_next_minute_from_state(blueprint, state)
+        if not didnt_buys(blueprint, state_next_minute[1])
     )
 
 
 def get_max_geodes_from_states(states: States) -> int:
-
     max_geodes = 0
 
     for state in states:
@@ -255,15 +267,17 @@ def part1(file: str) -> None:
     for num, blueprint in sorted(blueprints):
 
         time_left = 24
-        robots = frozenset([("OR", 1), ("CL", 0), ("OB", 0), ("GE", 0)])
-        materials = frozenset([("OR", 0), ("CL", 0), ("OB", 0), ("GE", 0)])
-        states = frozenset([(robots, materials)])
+        robots: Robots = frozenset([("OR", 1), ("CL", 0), ("OB", 0), ("GE", 0)])
+        materials: Materials = frozenset([("OR", 0), ("CL", 0), ("OB", 0), ("GE", 0)])
+        states: States = frozenset([(robots, materials)])
 
         for time in range(1, time_left + 1):
             states = get_states_next_minute(blueprint, states)
+            print(num, time, len(states), get_max_geodes_from_states(states))
 
-        get_affordables.cache_clear()
         get_buildables.cache_clear()
+        get_affordables.cache_clear()
+        didnt_buys.cache_clear()
         use_materials_to_make_robot.cache_clear()
         get_states_next_minute_from_state.cache_clear()
 
@@ -289,10 +303,11 @@ def part2(file: str) -> None:
 
         for time in range(1, time_left + 1):
             states = get_states_next_minute(blueprint, states)
-            print(num, time, len(states))
+            print(num, time, len(states), get_max_geodes_from_states(states))
 
-        get_affordables.cache_clear()
         get_buildables.cache_clear()
+        get_affordables.cache_clear()
+        didnt_buys.cache_clear()
         use_materials_to_make_robot.cache_clear()
         get_states_next_minute_from_state.cache_clear()
 
@@ -302,7 +317,7 @@ def part2(file: str) -> None:
 
 
 def main(file: str) -> None:
-    # part1(file)
+    part1(file)
     part2(file)
 
 
