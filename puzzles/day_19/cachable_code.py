@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from functools import partial, cache
+from functools import cache
 from pprint import pprint
-from typing import Tuple, FrozenSet, Callable, Dict, Literal, Union
+from typing import Tuple, FrozenSet, Dict, Literal, List
 
 Robot = Literal["OR", "CL", "OB", "GE"]
 Robots = FrozenSet[Tuple[Robot, int]]
@@ -23,6 +23,9 @@ BluePrints_Dict = Dict[int, BluePrint_Dict]
 
 Buildables = FrozenSet[Robot]
 Affordables = Buildables
+
+State = Tuple[Robots, Materials]
+States = FrozenSet[State]
 
 
 @cache
@@ -119,11 +122,6 @@ def get_blueprints(file: str) -> BluePrints:
 
 
 @cache
-def get_crushed_geodes(materials: Materials) -> int:
-    return [material for material in materials if material[0] == "GE"][0][1]
-
-
-@cache
 def make_materials(robots: Robots, materials: Materials) -> Materials:
 
     robots_dict = robots_to_dict(robots)
@@ -201,32 +199,52 @@ def use_materials_to_make_robot(
 
 
 @cache
-def get_max_crushed_geodes(
-    blueprint: BluePrint, robots: Robots, materials: Materials, time_left: int
-) -> int:
+def get_states_next_minute_from_state(blueprint: BluePrint, state: State) -> States:
 
-    max_crushed_geodes = get_crushed_geodes(materials)
+    next_robots_list: List[Robots] = []
+    next_materials_list: List[Materials] = []
+
+    robots, materials = state
 
     buildables = get_buildables(blueprint, robots)
+    affordables = get_affordables(blueprint, materials, buildables)
+    intermediate_materials = make_materials(robots, materials)
 
-    for robot in buildables:
-        crushed_geodes = 0
-        robots_ = robots
-        materials_ = materials
-        for time in range(time_left - 1, -1, -1):
-            affordables = get_affordables(blueprint, materials_, buildables)
-            materials_ = make_materials(robots_, materials_)
-            if robot in affordables:
-                robots_, materials_ = use_materials_to_make_robot(
-                    blueprint, robots_, materials_, robot
-                )
-                crushed_geodes = get_max_crushed_geodes(
-                    blueprint, robots_, materials_, time
-                )
-                break
-        max_crushed_geodes = max(crushed_geodes, max_crushed_geodes)
+    if affordables:
+        for affordable in affordables:
+            next_robots, next_materials = use_materials_to_make_robot(
+                blueprint, robots, intermediate_materials, affordable
+            )
+            next_robots_list.append(next_robots)
+            next_materials_list.append(next_materials)
+    else:
+        next_robots_list.append(robots)
+        next_materials_list.append(intermediate_materials)
 
-    return max_crushed_geodes
+    return frozenset(zip(next_robots_list, next_materials_list))
+
+
+def get_states_next_minute(blueprint: BluePrint, states: States) -> States:
+    return frozenset(
+        [
+            state_next_minute
+            for state in states
+            for state_next_minute in get_states_next_minute_from_state(blueprint, state)
+        ]
+    )
+
+
+def get_max_geodes_from_states(states: States) -> int:
+
+    max_geodes = 0
+
+    for state in states:
+        _, materials = state
+        for material, amount in materials:
+            if material == "GE":
+                max_geodes = max(amount, max_geodes)
+
+    return max_geodes
 
 
 def part1(file: str) -> None:
@@ -236,27 +254,57 @@ def part1(file: str) -> None:
 
     for num, blueprint in sorted(blueprints):
 
+        time_left = 24
         robots = frozenset([("OR", 1), ("CL", 0), ("OB", 0), ("GE", 0)])
         materials = frozenset([("OR", 0), ("CL", 0), ("OB", 0), ("GE", 0)])
-        max_crushed_geodes = get_max_crushed_geodes(blueprint, robots, materials, 24)
+        states = frozenset([(robots, materials)])
 
-        print(
-            f"With blueprint {num}, you can crush up to {max_crushed_geodes} geodes, which gives a quality level of {num * max_crushed_geodes}"
-        )
+        for time in range(1, time_left + 1):
+            states = get_states_next_minute(blueprint, states)
 
-        result += num * max_crushed_geodes
+        get_affordables.cache_clear()
+        get_buildables.cache_clear()
+        use_materials_to_make_robot.cache_clear()
+        get_states_next_minute_from_state.cache_clear()
+
+        result += num * get_max_geodes_from_states(states)
 
     print("Part 1: Total quality level is", result)
 
 
 def part2(file: str) -> None:
-    ...
+
+    blueprints = get_blueprints(file)
+    result = 1
+
+    for num, blueprint in sorted(blueprints):
+
+        if num > 3:
+            break
+
+        time_left = 32
+        robots = frozenset([("OR", 1), ("CL", 0), ("OB", 0), ("GE", 0)])
+        materials = frozenset([("OR", 0), ("CL", 0), ("OB", 0), ("GE", 0)])
+        states = frozenset([(robots, materials)])
+
+        for time in range(1, time_left + 1):
+            states = get_states_next_minute(blueprint, states)
+            print(num, time, len(states))
+
+        get_affordables.cache_clear()
+        get_buildables.cache_clear()
+        use_materials_to_make_robot.cache_clear()
+        get_states_next_minute_from_state.cache_clear()
+
+        result *= get_max_geodes_from_states(states)
+
+    print("Part 2: Total quality level is", result)
 
 
 def main(file: str) -> None:
-    part1(file)
+    # part1(file)
     part2(file)
 
 
 if __name__ == "__main__":
-    main("example.txt")
+    main("data.txt")
