@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from functools import partial
-from typing import List, Dict, Tuple, Callable, Optional
+from typing import List, Dict, Tuple, Callable
 
 
 def get_data(file: str):
@@ -88,9 +88,7 @@ def get_max_crushed_geodes_fun(
         general_use_materials_to_make_robot, blueprint
     )
 
-    def get_max_crushed_geodes(
-        robots: Robots, materials: Materials, time_left: int = 24
-    ) -> int:
+    def get_max_crushed_geodes(robots: Robots, materials: Materials, time_left) -> int:
 
         max_crushed_geodes = get_crushed_geodes(materials)
 
