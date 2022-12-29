@@ -317,7 +317,7 @@ def part2(file: str) -> None:
 
 
 def main(file: str) -> None:
-    part1(file)
+    # part1(file)
     part2(file)
 
 
