@@ -40,7 +40,7 @@ def get_valley_data(file):
     return rows, cols, row_blizzes, col_blizzes
 
 
-rows, cols, row_blizzes, col_blizzes = get_valley_data("example.txt")
+rows, cols, row_blizzes, col_blizzes = get_valley_data("data.txt")
 
 
 times = lcm(
@@ -58,6 +58,10 @@ def is_target(row, col, time: int | None = None) -> bool:
 
 def dist_to_target(row, col, time) -> int:
     return abs(row - (rows - 1)) + abs(col - (cols - 2)) + abs(time)
+
+
+def dist_to_start(row, col, time) -> int:
+    return abs(row) + abs(col - 1) + abs(time)
 
 
 @cache
@@ -201,8 +205,7 @@ while not is_start(*current_position):
 
     unvisited_positions = sorted(
         unvisited_positions,
-        key=lambda position: dist_to_target(*position),
-        reverse=True,
+        key=lambda position: dist_to_start(*position),
     )
 
     current_position = unvisited_positions.pop(0)
