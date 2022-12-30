@@ -316,8 +316,8 @@ def part2(file: str) -> None:
 
 def main(file: str) -> None:
     part1(file)
-    part2(file)
+    # part2(file)
 
 
 if __name__ == "__main__":
-    main("data.txt")
+    main("example.txt")

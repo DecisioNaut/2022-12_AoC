@@ -188,7 +188,7 @@ def part2(file: str) -> None:
             max_crushed_geodes = get_max_crushed_geodes(robots, materials, 32)
 
             print(
-                f"With blueprint {num}, you can crush up to {max_crushed_geodes} geodes in 32mins, which gives a quality level of {num * max_crushed_geodes}"
+                f"With blueprint {num}, you can crush up to {max_crushed_geodes} geodes in 32mins, which gives a quality level of {max_crushed_geodes}"
             )
 
             result *= max_crushed_geodes
