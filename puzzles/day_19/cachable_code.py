@@ -257,7 +257,9 @@ def part1(file: str) -> None:
 
         for time in range(1, time_left + 1):
             states = get_states_next_minute(blueprint, states)
-            print(f"Blueprint {num} @ {time}min has {len(states)} states...")
+            print(
+                f"Blueprint {num} @ {str(time).zfill(2)}min has {len(states)} states..."
+            )
 
         max_geodes = get_max_geodes_from_states(states)
 
@@ -292,6 +294,9 @@ def part2(file: str) -> None:
 
         for time in range(1, time_left + 1):
             states = get_states_next_minute(blueprint, states)
+            print(
+                f"Blueprint {num} @ {str(time).zfill(2)}min has {len(states)} states..."
+            )
 
         max_geodes = get_max_geodes_from_states(states)
 
@@ -310,7 +315,7 @@ def part2(file: str) -> None:
 
 
 def main(file: str) -> None:
-    # part1(file)
+    part1(file)
     part2(file)
 
 
