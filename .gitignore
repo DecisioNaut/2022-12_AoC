@@ -1,5 +1,4 @@
 .env
 .vscode 
 .python-version
-pyproject.toml
 poetry.lock
