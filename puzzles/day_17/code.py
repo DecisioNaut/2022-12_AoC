@@ -1,159 +1,226 @@
 from __future__ import annotations
 
-from typing import List, Tuple, Literal, Generator
+from functools import cache
 from itertools import cycle
+from typing import Tuple, Literal, List
+
+Jet = Literal["<", ">"]
+JetPattern = Tuple[Jet, ...]
+
+X, Y = int, int
+Point = Tuple[X, Y]
+Shape = Tuple[Point, ...]
+ShapePattern = Tuple[Shape, ...]
+
+Base = Shape
 
 
-def get_data(file: str):
-    with open("./puzzles/day_17/" + file, mode="r") as in_file:
-        for line in in_file.readlines():
-            yield line.strip()
+def get_base() -> Base:
+    base = ((1, 0), (2, 0), (3, 0), (4, 0), (5, 0), (6, 0), (7, 0))
+    return base
 
 
-class Shape:
-    def __init__(self, shape_pattern: List[Tuple[int, int]], height: int) -> None:
-        self._positions: List[Tuple[int, int]] = [
-            (x, y + height) for x, y in shape_pattern
-        ]
-        self._active = True
+@cache
+def calibrate_base(base: Base) -> Tuple[Base, Y]:
 
-    @property
-    def positions(self):
-        return self._positions
+    y_calibration = max(y for _, y in base)
+    next_base = tuple((x, y - y_calibration) for x, y in base)
 
-    @property
-    def down(self) -> List[Tuple[int, int]]:
-        return [(x, y - 1) for x, y in self._positions]
-
-    def move_down(self):
-        self._positions = [(x, y - 1) for x, y in self._positions]
-
-    @property
-    def right(self) -> List[Tuple[int, int]]:
-        return [(x + 1, y) for x, y in self._positions]
-
-    def move_right(self):
-        self._positions = [(x + 1, y) for x, y in self._positions]
-
-    @property
-    def left(self) -> List[Tuple[int, int]]:
-        return [(x - 1, y) for x, y in self._positions]
-
-    def move_left(self):
-        self._positions = [(x - 1, y) for x, y in self._positions]
-
-    def destroy(self) -> None:
-        self._active = False
-
-    def __bool__(self):
-        return self._active
+    return next_base, y_calibration
 
 
-class Chamber:
-    def __init__(
-        self,
-        shapes_patterns: List[List[Tuple[int, int]]],
-        wind_pattern: List[Literal["<", ">"]],
-        width: int = 7,
+@cache
+def simplify_base(base: Base) -> Base:
+
+    y_max = max(
+        y for _, y in base if all((x, y) in base for x in [1, 2, 3, 4, 5, 6, 7])
+    )
+    # y_max_7 = max(y for x, y in base if (x == 7))
+    # y_min = min(y_max_1, y_max_7)
+    simplified_base = tuple((x, y) for x, y in base if y >= y_max)
+
+    return simplified_base
+
+
+def get_shape_pattern() -> ShapePattern:
+
+    shape_1: Shape = ((3, 4), (4, 4), (5, 4), (6, 4))
+    shape_2: Shape = ((4, 4), (3, 5), (4, 5), (5, 5), (4, 6))
+    shape_3: Shape = ((3, 4), (4, 4), (5, 4), (5, 5), (5, 6))
+    shape_4: Shape = ((3, 4), (3, 5), (3, 6), (3, 7))
+    shape_5: Shape = ((3, 4), (4, 4), (3, 5), (4, 5))
+
+    shape_pattern: ShapePattern = (shape_1, shape_2, shape_3, shape_4, shape_5)
+
+    return shape_pattern
+
+
+@cache
+def get_next_shape(shape_pattern: ShapePattern) -> Tuple[Shape, ShapePattern]:
+
+    next_shape = shape_pattern[0]
+    next_shape_pattern = shape_pattern[1:] + (next_shape,)
+
+    return next_shape, next_shape_pattern
+
+
+def get_jet_pattern(file: str) -> JetPattern:
+
+    jet_pattern: JetPattern = tuple()
+    jets: List[Jet] = ["<", ">"]
+
+    with open("./puzzles/day_17/" + file, mode="r") as f:
+        for line in f.readlines():
+            for char in line:
+                if char in jets:
+                    jet_pattern += (char,)
+
+    return jet_pattern
+
+
+@cache
+def get_next_jet(jet_pattern: JetPattern) -> Tuple[Jet, JetPattern]:
+
+    next_jet = jet_pattern[0]
+    next_jet_pattern = jet_pattern[1:] + (next_jet,)
+
+    return next_jet, next_jet_pattern
+
+
+def move_right_if_possible(shape: Shape, base: Base) -> Shape:
+
+    potential_new_shape = tuple((x + 1, y) for x, y in shape)
+
+    if any(x == 8 for x, _ in potential_new_shape) | any(
+        point in base for point in potential_new_shape
     ):
-        self._shapes_patterns: Generator[List[Tuple[int, int]]] = cycle(shapes_patterns)
-        self._wind_pattern: Generator[Literal["<", ">"]] = cycle((wind_pattern))
-        self._width: int = width
-        self._landed_shapes: List[Tuple[int, int]] = [
-            (i, 0) for i in range(self._width + 2)
-        ]  # Start with floor
+        return shape
+    else:
+        return potential_new_shape
 
-    @property
-    def height(self):
-        return max([y for x, y in self._landed_shapes])
 
-    def hits_walls(self, shape_positions: List[Tuple[int, int]]) -> bool:
-        for shape_position in shape_positions:
-            x, y = shape_position
-            if (x == 0) | (x == self._width + 1):
-                return True
-        return False
+def move_left_if_possible(shape: Shape, base: Base) -> Shape:
 
-    def hits_landed_shapes(self, shape_positions: List[Tuple[int, int]]) -> bool:
-        for shape_position in shape_positions:
-            if shape_position in self._landed_shapes:
-                return True
-        return False
+    potential_new_shape = tuple((x - 1, y) for x, y in shape)
 
-    def hits_something(self, shape_positions: List[Tuple[int, int]]) -> bool:
-        return self.hits_walls(shape_positions) | self.hits_landed_shapes(
-            shape_positions
-        )
+    if any(x == 0 for x, _ in potential_new_shape) | any(
+        point in base for point in potential_new_shape
+    ):
+        return shape
+    else:
+        return potential_new_shape
 
-    def fill(self, num_shapes: int):
 
-        for counter, shape_pattern in enumerate(self._shapes_patterns):
+def move_down_if_possible(shape: Shape, base: Base) -> Tuple[Shape, Base]:
 
-            if counter == num_shapes:
-                break
+    potential_new_shape = tuple((x, y - 1) for x, y in shape)
 
-            current_height = self.height
-            shape = Shape(shape_pattern, current_height + 3)
-
-            while shape:
-
-                for wind in self._wind_pattern:
-
-                    if wind == ">":
-                        if not (self.hits_something(shape.right)):
-                            shape.move_right()
-                    elif wind == "<":
-                        if not (self.hits_something(shape.left)):
-                            shape.move_left()
-                    else:
-                        raise ValueError
-
-                    if not (self.hits_something(shape.down)):
-                        shape.move_down()
-                    else:
-                        self._landed_shapes += shape.positions
-                        shape.destroy()
-                        break
+    if any(point in base for point in potential_new_shape):
+        return (), base + shape
+    else:
+        return potential_new_shape, base
 
 
 def part1(file: str) -> None:
 
-    shape_pattern_1 = [(3, 1), (4, 1), (5, 1), (6, 1)]
-    shape_pattern_2 = [(4, 1), (3, 2), (4, 2), (5, 2), (4, 3)]
-    shape_pattern_3 = [(3, 1), (4, 1), (5, 1), (5, 2), (5, 3)]
-    shape_pattern_4 = [(3, 1), (3, 2), (3, 3), (3, 4)]
-    shape_pattern_5 = [(3, 1), (4, 1), (3, 2), (4, 2)]
+    # Basic setup
+    height = 0
+    base = get_base()
+    shape_pattern = get_shape_pattern()
+    jet_pattern = get_jet_pattern(file)
 
-    shape_patterns = [
-        shape_pattern_1,
-        shape_pattern_2,
-        shape_pattern_3,
-        shape_pattern_4,
-        shape_pattern_5,
-    ]
+    # Cycle through patterns
+    rocks_shapes = enumerate(cycle(shape_pattern), 1)
+    jets = cycle(jet_pattern)
 
-    for data in get_data(file):
-        wind_pattern = list(data)
+    # Set rock counter
+    rocks = 0
 
-    chamber = Chamber(shape_patterns, wind_pattern)
+    while rocks < 2022:
 
-    chamber.fill(2022)
+        rocks, shape = next(rocks_shapes)
 
-    print("Part 1:", chamber.height)
+        while shape:
+
+            jet = next(jets)
+
+            if jet == ">":
+                shape = move_right_if_possible(shape, base)
+            elif jet == "<":
+                shape = move_left_if_possible(shape, base)
+            shape, base = move_down_if_possible(shape, base)
+
+        base, y_calibration = calibrate_base(base)
+        height += y_calibration
+        base = simplify_base(base)
+
+    print(height)
 
 
 def part2(file: str) -> None:
-    data = get_data(file)
-    print(
-        "Part 2:",
-    )
+
+    height = 0
+    base = get_base()
+    shape_pattern = get_shape_pattern()
+    jet_pattern = get_jet_pattern(file)
+
+    caching: List[Tuple[Base, ShapePattern, JetPattern]] = []
+    heights: List[int] = []
+
+    while (base, shape_pattern, jet_pattern) not in caching:
+
+        caching.append((base, shape_pattern, jet_pattern))
+        heights.append(height)
+
+        shape, shape_pattern = get_next_shape(shape_pattern)
+
+        while shape:
+
+            jet, jet_pattern = get_next_jet(jet_pattern)
+
+            if jet == ">":
+                shape = move_right_if_possible(shape, base)
+            elif jet == "<":
+                shape = move_left_if_possible(shape, base)
+            shape, base = move_down_if_possible(shape, base)
+
+        base, y_calibration = calibrate_base(base)
+        height += y_calibration
+        base = simplify_base(base)
+
+    repeated_pattern = (base, shape_pattern, jet_pattern)
+
+    caching.append(repeated_pattern)
+    heights.append(height)
+
+    rocks_intro = caching.index(repeated_pattern)
+    height_intro = heights[rocks_intro]
+
+    rocks_intro_plus_repeat = caching.index(repeated_pattern, rocks_intro + 1)
+    height_intro_plus_repeat = heights[rocks_intro_plus_repeat]
+
+    rocks_repeat = rocks_intro_plus_repeat - rocks_intro
+    height_repeat = height_intro_plus_repeat - height_intro
+
+    rocks_total = 1_000_000_000_000
+    rocks_total_without_intro = rocks_total - rocks_intro
+
+    repetitions = rocks_total_without_intro // rocks_repeat
+    rocks_remainder_without_intro = rocks_total_without_intro % rocks_repeat
+    rocks_remainder = rocks_remainder_without_intro + rocks_intro
+
+    height_remainder = heights[rocks_remainder] - heights[rocks_intro]
+
+    height_total = height_intro + repetitions * height_repeat + height_remainder
+
+    print(height_total)
 
 
-def main(file: str) -> None:
-
+def main() -> None:
+    file = "data.txt"
     part1(file)
     part2(file)
 
 
 if __name__ == "__main__":
-    main("data.txt")
+    main()
