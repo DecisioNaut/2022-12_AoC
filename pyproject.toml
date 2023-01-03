@@ -2,13 +2,15 @@
 name = "advent of code 2022"
 version = "0.1.0"
 description = "My solutions to 2022's Advent of Code"
-authors = ["Your Name <you@example.com>"]
+authors = ["Caspar Heidbrink"]
 license = "MIT"
 readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.11"
 
+[tool.poetry.group.dev.dependencies]
+black = "^22.12.0"
 
 [build-system]
 requires = ["poetry-core"]
