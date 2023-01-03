@@ -164,13 +164,13 @@ def part2(file: str) -> None:
     shape_pattern = get_shape_pattern()
     jet_pattern = get_jet_pattern(file)
 
-    base_shape_pat_jet_pat_cache = []
-    height_cache = []
+    caching: List[Tuple[Base, ShapePattern, JetPattern]] = []
+    heights: List[int] = []
 
-    while (base, shape_pattern, jet_pattern) not in base_shape_pat_jet_pat_cache:
+    while (base, shape_pattern, jet_pattern) not in caching:
 
-        base_shape_pat_jet_pat_cache.append((base, shape_pattern, jet_pattern))
-        height_cache.append(height)
+        caching.append((base, shape_pattern, jet_pattern))
+        heights.append(height)
 
         shape, shape_pattern = get_next_shape(shape_pattern)
 
@@ -184,39 +184,43 @@ def part2(file: str) -> None:
                 shape = move_left_if_possible(shape, base)
             shape, base = move_down_if_possible(shape, base)
 
-            if shape:
-                y_min_shape = min(y for _, y in shape)
-                y_min_base = min(y for _, y in base)
-                assert y_min_base < y_min_shape
-
         base, y_calibration = calibrate_base(base)
         height += y_calibration
         base = simplify_base(base)
 
-    len_cache = (
-        len(height_cache)
-        if len(height_cache) == len(base_shape_pat_jet_pat_cache)
-        else AssertionError
-    )
-    index_of_first_double_entry = base_shape_pat_jet_pat_cache.index(
-        (base, shape_pattern, jet_pattern)
-    )
-    height_at_first_double_entry = height_cache[index_of_first_double_entry]
+    repeated_pattern = (base, shape_pattern, jet_pattern)
 
-    print("Length of cache:              ", len_cache)
-    print("Index of first double entry:  ", index_of_first_double_entry)
-    print()
+    caching.append(repeated_pattern)
+    heights.append(height)
 
-    print("Current height:               ", height)
-    print("Height at first double entry: ", height_at_first_double_entry)
-    print()
+    rocks_intro = caching.index(repeated_pattern)
+    height_intro = heights[rocks_intro]
+
+    rocks_intro_plus_repeat = caching.index(repeated_pattern, rocks_intro + 1)
+    height_intro_plus_repeat = heights[rocks_intro_plus_repeat]
+
+    rocks_repeat = rocks_intro_plus_repeat - rocks_intro
+    height_repeat = height_intro_plus_repeat - height_intro
+
+    rocks_total = 1_000_000_000_000
+    rocks_total_without_intro = rocks_total - rocks_intro
+
+    repetitions = rocks_total_without_intro // rocks_repeat
+    rocks_remainder_without_intro = rocks_total_without_intro % rocks_repeat
+    rocks_remainder = rocks_remainder_without_intro + rocks_intro
+
+    height_remainder = heights[rocks_remainder] - heights[rocks_intro]
+
+    height_total = height_intro + repetitions * height_repeat + height_remainder
+
+    print(height_total)
 
 
-def main(file: str) -> None:
-    # part1(file)
+def main() -> None:
+    file = "data.txt"
+    part1(file)
     part2(file)
 
 
 if __name__ == "__main__":
-    file = "example.txt"
-    main(file)
+    main()
