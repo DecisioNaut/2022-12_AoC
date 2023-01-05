@@ -3,6 +3,7 @@ from __future__ import annotations
 from functools import cache
 from itertools import combinations
 from math import inf
+from datetime import datetime
 from typing import Optional, NamedTuple, Type, Generator, Callable
 
 
@@ -296,7 +297,17 @@ def part2(file) -> None:
 
     max_flow = 0
 
+    num_combinations = 0
     for my_valves, elephant_valves in select_from_valves(valves):
+        num_combinations += 1
+
+    elapsed_time = 0
+
+    for counter, (my_valves, elephant_valves) in enumerate(
+        select_from_valves(valves), 1
+    ):
+
+        start_time = datetime.now()
 
         my_rates = select_rates(my_valves, rates)
         my_distances = select_distances(my_valves, distances)
@@ -318,8 +329,14 @@ def part2(file) -> None:
 
         max_flow = max(max_flow, my_flow + elephant_flow)
 
+        end_time = datetime.now()
+        cycle_time_in_sec = (end_time - start_time).microseconds / 1_000_000
+        elapsed_time += cycle_time_in_sec
+        avg_time = elapsed_time / counter
+        outstanding_time = (num_combinations - counter) * avg_time
+
         print(
-            f"my_flow={my_flow} + elephant_flow={elephant_flow} = max_flow={my_flow + elephant_flow} > current_max_flow={max_flow}"
+            f"my_flow={my_flow} + elephant_flow={elephant_flow} = max_flow={my_flow + elephant_flow} > current_max_flow={max_flow} (needed {cycle_time_in_sec}s, running now for {elapsed_time // 60}mins, still needing approx. {outstanding_time // 60}mins)"
         )
 
     print("Part 2:", max_flow)
