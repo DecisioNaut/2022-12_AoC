@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 from functools import cache
-from pprint import pprint
+from itertools import combinations
 from math import inf
-from typing import Optional, NamedTuple
+from typing import Optional, NamedTuple, Type, Generator, Callable
+
+
+Times = Type
 
 
 def get_valves_neighbors_rates(
@@ -80,15 +83,17 @@ def calc_distances(file: str) -> dict[str, dict[str, int]]:
     return distances
 
 
-def clean(file) -> tuple[list[str], dict[str, int], dict[str, dict[str, int]]]:
+def clean_valves_rates_distances(
+    file,
+) -> tuple[list[str], dict[str, int], dict[str, dict[str, int]]]:
 
     neighbors, rates = get_valves_neighbors_rates(file)
     valves = list(neighbors.keys())
     distances = calc_distances(file)
 
-    clean_valves = [
-        valve_ for valve_ in valves if (rates[valve_] != 0) | (valve_ == "AA")
-    ]
+    clean_valves = sorted(
+        [valve_ for valve_ in valves if (rates[valve_] != 0) | (valve_ == "AA")]
+    )
 
     clean_rates = {
         valve_: rate for valve_, rate in rates.items() if (valve_ == "AA") | (rate != 0)
@@ -106,10 +111,13 @@ def clean(file) -> tuple[list[str], dict[str, int], dict[str, dict[str, int]]]:
     return clean_valves, clean_rates, clean_distances
 
 
-def part1(file):
+def make_TimesClass_and_optimizer(
+    valves: list[str],
+    rates: dict[str, int],
+    distances: dict[str, dict[str, int]],
+    time_available: int = 30,
+) -> tuple[Times, Callable]:
 
-    time_available = 30
-    valves, rates, distances = clean(file)
     valve_times_types = [(valve, Optional[int]) for valve in valves]
 
     class Times(NamedTuple("Times", valve_times_types)):
@@ -221,7 +229,7 @@ def part1(file):
 
         @property
         def total_flow(self) -> int:
-            return sum(self.flows.values())
+            return sum(list(self.flows.values()))
 
         def __repr__(self) -> str:
             return ", ".join(
@@ -232,21 +240,95 @@ def part1(file):
             )
 
     @cache
-    def maximise_total_flow(times: Times) -> int:
+    def optimizer(times: Times) -> int:
         best_total_flow = times.total_flow
         if times.next_times != []:
             for next_times in times.next_times:
-                next_total_flow = maximise_total_flow(next_times)
+                next_total_flow = optimizer(next_times)
                 best_total_flow = max(best_total_flow, next_total_flow)
         return best_total_flow
 
+    return Times, optimizer
+
+
+def select_from_valves(valves: list[str]) -> Generator:
+    tuple[int]
+    for i in range(0, (len(valves) - 1) // 2 + 1):
+        for combination in combinations(valves[1:], i):
+            left = [valves[0]] + [valve for valve in combination]
+            right = [valves[0]] + [
+                valve for valve in valves[1:] if valve not in combination
+            ]
+            yield left, right
+
+
+def select_rates(selected_valves: list[str], rates: dict[str, int]) -> dict[str, int]:
+    return {valve: rate for valve, rate in rates.items() if valve in selected_valves}
+
+
+def select_distances(
+    selected_valves: list[str], distances: dict[str, dict[str, int]]
+) -> dict[str, dict[str, int]]:
+    return {
+        valve: {
+            valve_: dist for valve_, dist in dists.items() if valve_ in selected_valves
+        }
+        for valve, dists in distances.items()
+        if valve in selected_valves
+    }
+
+
+def part1(file) -> None:
+
+    valves, rates, distances = clean_valves_rates_distances(file)
+    Times, optimizer = make_TimesClass_and_optimizer(
+        valves, rates, distances, time_available=30
+    )
+
     times = Times(AA=1)
-    print("Part 1", maximise_total_flow(times))
+    print("Part 1:", optimizer(times))
 
 
-def main():
-    file = "example.txt"
-    part1(file)
+def part2(file) -> None:
+
+    valves, rates, distances = clean_valves_rates_distances(file)
+    time_available = 26
+
+    max_flow = 0
+
+    for my_valves, elephant_valves in select_from_valves(valves):
+
+        my_rates = select_rates(my_valves, rates)
+        my_distances = select_distances(my_valves, distances)
+        myTimes, my_optimizer = make_TimesClass_and_optimizer(
+            my_valves, my_rates, my_distances, time_available
+        )
+
+        my_times = myTimes(AA=1)
+        my_flow = my_optimizer(my_times)
+
+        elephant_rates = select_rates(elephant_valves, rates)
+        elephant_distances = select_distances(elephant_valves, distances)
+        elephantTimes, elephant_optimizer = make_TimesClass_and_optimizer(
+            elephant_valves, elephant_rates, elephant_distances, time_available
+        )
+
+        elephant_times = elephantTimes(AA=1)
+        elephant_flow = elephant_optimizer(elephant_times)
+
+        max_flow = max(max_flow, my_flow + elephant_flow)
+
+        print(
+            f"my_flow={my_flow} + elephant_flow={elephant_flow} = max_flow={my_flow + elephant_flow} > current_max_flow={max_flow}"
+        )
+
+    print("Part 2:", max_flow)
+
+
+def main() -> None:
+    file = "data.txt"
+    # part1(file)
+    part2(file)
 
 
 if __name__ == "__main__":
