@@ -1,13 +1,14 @@
 from __future__ import annotations
-from typing import Dict, List, Tuple, Optional
+
+from functools import cache
 from pprint import pprint
 from math import inf
-from functools import partial, cache
+from typing import Optional, NamedTuple
 
 
 def get_valves_neighbors_rates(
     file: str,
-) -> Tuple[Dict[str, List[str], Dict[str, int]]]:
+) -> tuple[dict[str, list[str]], dict[str, int]]:
     valves_neighbors = dict()
     valves_rates = dict()
     with open("./puzzles/day_16/" + file, mode="r") as input_file:
@@ -23,201 +24,223 @@ def get_valves_neighbors_rates(
     return valves_neighbors, valves_rates
 
 
-def calc_valves_dists(
-    initial_valve: str,
-    valves_neighbors: Dict[str, List[str]],
-    relevant_valves=None,
-) -> Dict[str, float]:
+neighbors, rates = get_valves_neighbors_rates("data.txt")
+valves = list(neighbors.keys())
 
-    unvisited_valves = list(valves_neighbors.keys())
-    distances = {valve: inf for valve in unvisited_valves}
-    visited_valves = []
 
-    current_valve = initial_valve
-    distances[current_valve] = 0
+def calc_distances(neighbors: dict[str, list[str]]) -> dict[str, dict[str, int]]:
 
-    while unvisited_valves:
+    distances: dict[str, dict[str, int]] = {}
 
-        neighbors = valves_neighbors[current_valve]
-        unvisited_neighbors = [
-            neighbor for neighbor in neighbors if neighbor not in visited_valves
-        ]
+    for valve in valves:
 
-        for unvisited_neighbor in unvisited_neighbors:
-            if distances[current_valve] + 1 < distances[unvisited_neighbor]:
-                distances[unvisited_neighbor] = distances[current_valve] + 1
+        visited_valves = []
+        unvisited_valves = [valve_ for valve_ in valves]
+        current_distances = {valve_: inf for valve_ in unvisited_valves}
 
-        visited_valves.append(current_valve)
-        unvisited_valves.remove(current_valve)
+        current_valve = valve
+        current_distances[current_valve] = 0
 
-        next_possible_valves = [
-            valve for valve in unvisited_valves if distances[valve] < inf
-        ]
+        while unvisited_valves:
 
-        if next_possible_valves != []:
-            current_valve = next_possible_valves[0]
+            available_neigbors = [
+                valve
+                for valve in neighbors[current_valve]
+                if valve not in visited_valves
+            ]
 
-    del distances[initial_valve]
+            for valve_ in available_neigbors:
+                if current_distances.get(valve_) is None:
+                    current_distances[valve_] = current_distances[current_valve] + 1
+                else:
+                    current_distances[valve_] = min(
+                        current_distances[valve_],
+                        current_distances[current_valve] + 1,
+                    )
 
-    if relevant_valves:
-        distances = {
-            key: value for key, value in distances.items() if key in relevant_valves
+            visited_valves.append(current_valve)
+            unvisited_valves.remove(current_valve)
+
+            distances_of_valves_not_visited = {
+                valve_: dist
+                for valve_, dist in current_distances.items()
+                if valve_ not in visited_valves
+            }
+
+            if distances_of_valves_not_visited:
+
+                current_valve = sorted(
+                    distances_of_valves_not_visited.keys(),
+                    key=lambda valve: distances_of_valves_not_visited[valve],
+                )[0]
+
+        current_distances_int: dict[str, int] = {
+            valve_: int(dist) for valve_, dist in current_distances.items()
         }
+        distances[valve] = current_distances_int
 
     return distances
 
 
-def get_valves_dists_rates(
-    file, only_relevant=None
-) -> Tuple[Dict[Dict[str, int]], Dict[str, int]]:
-    valves_neighbors, valves_rates = get_valves_neighbors_rates(file)
-    valves_dists = {
-        valve: calc_valves_dists(valve, valves_neighbors)
-        for valve, neighbors in valves_neighbors.items()
+distances = calc_distances(neighbors)
+
+
+def clean(
+    valves: list[str], rates: dict[str, int], distances: dict[str, dict[str, int]]
+) -> tuple[list[str], dict[str, int], dict[str, dict[str, int]]]:
+
+    clean_valves = [
+        valve_ for valve_ in valves if (rates[valve_] != 0) | (valve_ == "AA")
+    ]
+
+    clean_rates = {
+        valve_: rate for valve_, rate in rates.items() if (valve_ == "AA") | (rate != 0)
     }
 
-    if only_relevant is not None:
-        if isinstance(only_relevant, str):
-            valves_dists = {
-                valve: {
-                    other_valve: distance
-                    for other_valve, distance in distances.items()
-                    if (valves_rates[other_valve] != 0) | (other_valve == only_relevant)
-                }
-                for valve, distances in valves_dists.items()
-                if (valves_rates[valve] != 0) | (valve == only_relevant)
-            }
-            valves_rates = {
-                valve: rate
-                for valve, rate in valves_rates.items()
-                if (rate != 0) | (valve == only_relevant)
-            }
-        elif isinstance(only_relevant, bool):
-            if only_relevant == True:
-                valves_dists = {
-                    valve: {
-                        other_valve: distance
-                        for other_valve, distance in distances.items()
-                        if (valves_rates[other_valve] != 0)
-                    }
-                    for valve, distances in valves_dists.items()
-                    if (valves_rates[valve] != 0)
-                }
-                valves_rates = {
-                    valve: rate for valve, rate in valves_rates.items() if (rate != 0)
-                }
-
-    return valves_dists, valves_rates
-
-
-def get_dists_here_next_dists(
-    valve: str, dists: Dict[str, Dict[str, int]]
-) -> Tuple[int, Dict[str, Dict[str, int]]]:
-
-    dists_here = dists[valve]
-    next_dists = {
-        valve_: {
-            valve__: distance
-            for valve__, distance in distances.items()
-            if valve__ != valve
+    clean_distances = {
+        current_valve: {
+            other_valve: distance
+            for other_valve, distance in current_distances.items()
+            if (other_valve == "AA") | (rates[other_valve] != 0)
         }
-        for valve_, distances in dists.items()
-        if valve_ != valve
+        for current_valve, current_distances in distances.items()
+        if (current_valve == "AA") | (rates[current_valve] != 0)
     }
-
-    return dists_here, next_dists
-
-
-def get_rate_here_next_rates(
-    valve: str, rates: Dict[str, int]
-) -> Tuple[int, Dict[str, int]]:
-
-    rate_here = rates[valve]
-    next_rates = {valve_: rate for valve_, rate in rates.items() if valve_ != valve}
-
-    return rate_here, next_rates
+    return clean_valves, clean_rates, clean_distances
 
 
-def release_max_pressure(
-    valve: str,
-    dists: Dict[str, Dict[str, int]],
-    rates: Dict[str, int],
-    time_left,
-    total_time: Optional[int] = None,
-) -> Tuple[str, int]:
+time_available = 30
+valves, rates, distances = clean(valves, rates, distances)
+valve_times_types = [(valve, Optional[int]) for valve in valves]
 
-    # if time_left < 2:
-    #     return "", 0
 
-    if total_time is None:
-        total_time = time_left
+class Times(NamedTuple("Times", valve_times_types)):
+    """Somewhat hacky kind of class to define the state of the voyage through the maze"""
 
-    dists_here, next_dists = get_dists_here_next_dists(valve, dists)
-    rate_here, next_rates = get_rate_here_next_rates(valve, rates)
+    __slots__ = ()
 
-    time_here = 0
+    def __new__(cls, **kwargs):
+        """Set non given times at valves to None"""
+        for key in kwargs:
+            if key not in valves:
+                raise KeyError("Keys must be in valves")
+        if len(kwargs.values()) != len(set(kwargs.values())):
+            raise ValueError("Times provided must be unique")
+        if min(kwargs.values()) < 1:
+            raise ValueError("Lowest time must be 1")
+        if max(kwargs.values()) >= time_available:
+            raise ValueError(
+                "Highest time must be one below time_available to have an effect on pressure release"
+            )
+        values = {
+            valve: None if valve not in kwargs.keys() else kwargs[valve]
+            for valve in valves
+        }
+        return super().__new__(cls, **values)
 
-    if rate_here > 0:
-        time_here = 1
+    def __init__(self, **kwargs):
+        return super().__init__()
 
-    pressure_here = (time_left - time_here) * rate_here
-    str_here = (
-        " "
-        + valve
-        + "@t="
-        + str(total_time - (time_left - time_here))
-        + "/p="
-        + str(pressure_here)
-    )
+    @property
+    def visited_valves(self) -> list[str]:
+        """visited valves sorted in increasing order of time of visit"""
+        times: dict[str, int] = {
+            valve: time for valve, time in self._asdict().items() if time is not None
+        }
+        return sorted(times.keys(), key=lambda valve: times[valve])
 
-    next_pressure = 0
-    next_str = ""
+    @property
+    def unvisited_valves(self) -> list[str]:
+        """all valves with time set to None"""
+        times: dict[str, int] = {
+            valve: time for valve, time in self._asdict().items() if time is None
+        }
+        return sorted(times.keys())
 
-    for next_valve, dist_to_next_valve in dists_here.items():
+    @property
+    def available_valves(self) -> list[str]:
+        return [
+            valve
+            for valve in self.unvisited_valves
+            if distances[self.current_valve][valve]
+            < time_available - self.current_time - 1
+        ]
 
-        next_time_left = time_left - time_here - dist_to_next_valve
+    @property
+    def current_valve(self) -> str:
+        """valve with the highest time of visit"""
+        return self.visited_valves[-1]
 
-        if next_time_left < 2:
-            continue
+    @property
+    def current_time(self) -> int:
+        """highest time of visit"""
+        return self._asdict()[self.current_valve]
 
-        next_valve_str, next_valve_pressure = release_max_pressure(
-            valve=next_valve,
-            dists=next_dists,
-            rates=next_rates,
-            time_left=next_time_left,
-            total_time=total_time,
+    @property
+    def current_times_dict(self) -> dict[str, int]:
+        return {
+            valve: time for valve, time in self._asdict().items() if time is not None
+        }
+
+    @property
+    def next_times_dicts(self) -> list[dict[str, int]]:
+        current_valve = self.current_valve
+        current_valve_openable = rates[current_valve] != 0
+        current_time = self.current_time
+        available_valves = self.available_valves
+        next_times = [
+            {
+                valve: (
+                    current_time
+                    + current_valve_openable
+                    + distances[current_valve][valve]
+                )
+            }
+            for valve in available_valves
+        ]
+        return next_times
+
+    @property
+    def next_times(self) -> list[Times]:
+        current_times_dict = self.current_times_dict
+        next_times_dicts = self.next_times_dicts
+        return [
+            Times(**(current_times_dict | next_time_dict))
+            for next_time_dict in next_times_dicts
+        ]
+
+    @property
+    def flows(self) -> dict[str, int]:
+        valves = self.visited_valves
+        return {
+            valve: (time_available - self._asdict()[valve]) * rates[valve]
+            for valve in valves
+        }
+
+    @property
+    def total_flow(self) -> int:
+        return sum(self.flows.values())
+
+    def __repr__(self) -> str:
+        return ", ".join(
+            [
+                f"t={self.current_times_dict[valve]}:{valve}"
+                for valve in self.visited_valves
+            ]
         )
 
-        if next_valve_pressure >= next_pressure:
-            next_str = next_valve_str
-            next_pressure = next_valve_pressure
 
-    return str_here + next_str, pressure_here + next_pressure
+times = Times(AA=1)
 
 
-def part1(file: str) -> None:
-
-    current_valve = "AA"
-    dists, rates = get_valves_dists_rates(file, only_relevant=current_valve)
-
-    pprint(dists)
-
-    print(release_max_pressure(current_valve, dists, rates, 30))
-
-    # 1434 is wrong
-    # AA@t=0/p=0 UM@t=3/p=135 VO@t=7/p=138 JF@t=10/p=200
-    # AH@t=14/p=368 HZ@t=17/p=260 VR@t=20/p=240 GL@t=24/p=66 XN@t=27/p=27'
-    # 1434)
+@cache
+def maximise_total_flow(times: Times) -> int:
+    best_total_flow = times.total_flow
+    if times.next_times != []:
+        for next_times in times.next_times:
+            next_total_flow = maximise_total_flow(next_times)
+            best_total_flow = max(best_total_flow, next_total_flow)
+    return best_total_flow
 
 
-def part2(file: str) -> None:
-    ...
-
-
-def main(file: str) -> None:
-    part1(file)
-    part2(file)
-
-
-if __name__ == "__main__":
-    main("data.txt")
+print(maximise_total_flow(times))
