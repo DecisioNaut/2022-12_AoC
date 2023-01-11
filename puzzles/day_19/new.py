@@ -1,48 +1,52 @@
-def dfs(bp, maxspend, cache, time, bots, amts):
+def dfs(blueprint, max_bots, bots, materials, t, cache):
 
-    if time == 0:
-        return amts[3]
+    if t == 0:
+        return materials[3]
 
-    key = tuple([*bots, *amts])
+    key = tuple([*bots, *materials])
     if key in cache:
         return cache[key]
 
-    maxval = amts[3] + bots[3] * time
+    maxval = materials[3] + bots[3] * t
 
-    for bot, recipe in enumerate(bp):
+    for bot, recipe in enumerate(blueprint):
 
-        if bot != 3 and bots[bot] >= maxspend[bot]:
+        if bot != 3 and bots[bot] >= max_bots[bot]:
             continue
 
         wait = 0
 
-        for bot_type, amt in enumerate(recipe):
+        for material, amt in enumerate(recipe):
 
             if amt == 0:
                 continue
 
-            if bots[bot_type] == 0:
+            if bots[material] == 0:
                 break
 
-            wait = max(wait, -(-(amt - amts[bot_type]) // bots[bot_type]))
+            wait = max(wait, -(-(amt - materials[material]) // bots[material]))
 
         else:
 
-            remtime = time - wait - 1
-            if remtime <= 0:
+            t_remain = t - wait - 1
+            if t_remain <= 0:
                 continue
 
-            next_amts = [x + y * (wait + 1) for x, y in zip(amts, bots)]
-            for bot_type, amt in enumerate(recipe):
-                next_amts[bot_type] -= amt
-            for i in range(3):
-                next_amts[i] = min(next_amts[i], maxspend[i] * remtime)
+            next_materials = [x + y * (wait + 1) for x, y in zip(materials, bots)]
+            for material, amt in enumerate(recipe):
+                next_materials[material] -= amt
+                next_materials[material] = min(
+                    next_materials[material], max_bots[material] * t_remain
+                )
+            # for i in range(3):
+            #    next_materials[i] = min(next_materials[i], max_bots[i] * t_remain)
 
             next_bots = bots[:]
             next_bots[bot] += 1
 
             maxval = max(
-                maxval, dfs(bp, maxspend, cache, remtime, next_bots, next_amts)
+                maxval,
+                dfs(blueprint, max_bots, next_bots, next_materials, t_remain, cache),
             )
 
     cache[key] = maxval
@@ -50,8 +54,8 @@ def dfs(bp, maxspend, cache, time, bots, amts):
     return maxval
 
 
-# bp = [[(0, 4)], [(0, 2)], [(0, 3), (1, 14)], [(0, 2), (2, 7)]]
-bp = [[4, 0, 0], [2, 0, 0], [3, 14, 0], [2, 0, 7]]
-maxspend = [4, 14, 7]
+blueprint = [[4, 0, 0], [2, 0, 0], [3, 14, 0], [2, 0, 7]]
+max_bots = [max(recipe[bot] for recipe in blueprint) for bot in range(3)]
+print(max_bots)
 
-print(dfs(bp, maxspend, {}, 24, [1, 0, 0, 0], [0, 0, 0, 0]))
+print(dfs(blueprint, max_bots, [1, 0, 0, 0], [0, 0, 0, 0], 24, {}))
