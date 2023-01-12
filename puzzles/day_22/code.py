@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from typing import List, Union, Tuple, Literal, Optional, Dict
+from typing import List, Union, Tuple, Literal, Optional, Dict, Generator
 from pprint import pprint
 
 from collections import namedtuple
 
 
-def get_data(file: str) -> str:
+def get_data(file: str) -> Generator:
     with open("./puzzles/day_22/" + file, mode="r") as in_file:
         for line in in_file.readlines():
             yield line.replace(f"\n", "")
