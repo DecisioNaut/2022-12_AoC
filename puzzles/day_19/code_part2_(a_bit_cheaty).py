@@ -14,7 +14,7 @@ def dfs(blueprint, max_bots, bots, materials, t, cache):
         if bot != 3 and bots[bot] >= max_bots[bot]:
             continue
 
-        t_wait = 0
+        wait = 0
 
         for material, amt in enumerate(recipe):
 
@@ -24,12 +24,11 @@ def dfs(blueprint, max_bots, bots, materials, t, cache):
             if bots[material] == 0:
                 break
 
-            t_wait = max(t_wait, -(-(amt - materials[material]) // bots[material]))
+            wait = max(wait, -(-(amt - materials[material]) // bots[material]))
 
         else:
 
-            t_remain = t - t_wait - 1
-            t_remain = t - 1
+            t_remain = t - wait - 1
             if t_remain <= 0:
                 continue
 
@@ -39,6 +38,8 @@ def dfs(blueprint, max_bots, bots, materials, t, cache):
                 next_materials[material] = min(
                     next_materials[material], max_bots[material] * t_remain
                 )
+            # for i in range(3):
+            #    next_materials[i] = min(next_materials[i], max_bots[i] * t_remain)
 
             next_bots = bots[:]
             next_bots[bot] += 1
