@@ -33,7 +33,7 @@ def dfs(blueprint, max_bots, bots, materials, t, cache):
             if t_remain <= 0:
                 continue
 
-            next_materials = [x + y * (t_wait + 1) for x, y in zip(materials, bots)]
+            next_materials = [x + y * (wait + 1) for x, y in zip(materials, bots)]
             for material, amt in enumerate(recipe):
                 next_materials[material] -= amt
                 next_materials[material] = min(
