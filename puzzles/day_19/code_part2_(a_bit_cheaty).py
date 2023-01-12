@@ -1,4 +1,7 @@
-def dfs(blueprint, max_robots, robots, materials, t, cache):
+import re
+
+
+def maximize_geodes(blueprint, max_robots, robots, materials, t, cache):
 
     if t == 0:
         return materials[3]
@@ -44,7 +47,7 @@ def dfs(blueprint, max_robots, robots, materials, t, cache):
 
             maxval = max(
                 maxval,
-                dfs(
+                maximize_geodes(
                     blueprint, max_robots, next_robots, next_materials, t_remain, cache
                 ),
             )
@@ -54,8 +57,48 @@ def dfs(blueprint, max_robots, robots, materials, t, cache):
     return maxval
 
 
-blueprint = [[4, 0, 0], [2, 0, 0], [3, 14, 0], [2, 0, 7]]
-max_robots = [max(recipe[robot] for recipe in blueprint) for robot in range(3)]
-print(max_robots)
+def get_blueprints():
+    blueprints = []
+    maxes_robots = []
+    with open("./puzzles/day_19/data.txt", mode="r") as f:
+        for num, line in enumerate(f.readlines()):
 
-print(dfs(blueprint, max_robots, [1, 0, 0, 0], [0, 0, 0, 0], 24, {}))
+            if num >= 3:
+                break
+
+            ore_ore, cly_ore, obs_ore, obs_cly, ged_ore, ged_obs = map(
+                int, re.findall("(\d+)", line.split(":")[1][:-1])
+            )
+
+            blueprint = [
+                [ore_ore, 0, 0],
+                [cly_ore, 0, 0],
+                [obs_ore, obs_cly, 0],
+                [ged_ore, 0, ged_obs],
+            ]
+            max_robots = [
+                max(recipe[robot] for recipe in blueprint) for robot in range(3)
+            ]
+
+            blueprints.append(blueprint)
+            maxes_robots.append(max_robots)
+
+    return blueprints, maxes_robots
+
+
+def part2():
+    result = 1
+    blueprints, maxes_robots = get_blueprints()
+    for blueprint, max_robots in zip(blueprints, maxes_robots):
+        result *= maximize_geodes(
+            blueprint, max_robots, [1, 0, 0, 0], [0, 0, 0, 0], 32, {}
+        )
+    print("Part 2:", result)
+
+
+def main():
+    part2()
+
+
+if __name__ == "__main__":
+    main()
